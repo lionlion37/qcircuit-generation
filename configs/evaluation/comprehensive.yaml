@@ -1,0 +1,19 @@
+metrics:
+  fidelity: true
+  circuit_properties: true
+  statistical_analysis: true
+  diversity_metrics: true
+
+generation:
+  num_samples: 100
+  num_inference_steps: 50
+  guidance_scale: 1.0
+
+comparison:
+  compare_to_training: true
+  compare_to_random: true
+
+output:
+  save_results: true
+  create_plots: true
+  verbose: true

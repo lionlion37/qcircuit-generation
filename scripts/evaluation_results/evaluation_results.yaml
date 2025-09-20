@@ -1,0 +1,29 @@
+circuit_properties: {}
+config:
+  comparison:
+    compare_to_random: true
+    compare_to_training: true
+  generation: &id001
+    guidance_scale: 1.0
+    num_inference_steps: 50
+    num_samples: 100
+  metrics:
+    circuit_properties: true
+    diversity_metrics: true
+    fidelity: true
+    statistical_analysis: true
+  output:
+    create_plots: true
+    save_results: true
+    verbose: true
+diversity_metrics: {}
+evaluation_timestamp: '2025-09-20 16:23:15'
+generated_circuits_info:
+  generation_config: *id001
+  num_generated: 0
+model_info:
+  device: !!python/object/apply:torch.device
+  - cpu
+  model_type: QC_Compilation_UNet
+  training_epochs: 2
+statistical_analysis: {}

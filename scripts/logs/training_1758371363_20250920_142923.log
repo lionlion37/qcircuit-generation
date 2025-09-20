@@ -1,0 +1,67 @@
+2025-09-20 14:29:27 - experiment.training_1758371363 - INFO - Starting experiment: training_1758371363
+2025-09-20 14:29:27 - experiment.training_1758371363 - INFO - Configuration: {'model': {'type': 'QC_Compilation_UNet', 'params': {'model_features': [128, 128, 256], 'clr_dim': 8, 't_emb_size': 256, 'cond_emb_size': 512, 'num_heads': [8, 8, 2], 'num_res_blocks': [2, 2, 4], 'transformer_depths': [1, 2, 1], 'unitary_encoder_config': {'cond_emb_size': 512, 'model_features': [2, 32, 64, 512], 'num_heads': 8, 'transformer_depths': [2, 2], 'dropout': 0.2}}}, 'scheduler': {'type': 'DDIMScheduler', 'params': {'num_train_timesteps': 1000, 'beta_start': 0.0001, 'beta_end': 0.02, 'beta_schedule': 'cos_alpha', 'input_perturbation': 0.1, 'prediction_type': 'epsilon', 'eta': 1}}, 'training': {'learning_rate': 0.0001, 'optimizer': 'Adam', 'loss': 'MSELoss', 'num_epochs': 20, 'batch_size': 32, 'enable_guidance_train': True, 'guidance_train_p': 0.1, 'cached_text_enc': True}, 'text_encoder': {'type': 'CachedFrozenOpenCLIPEmbedder', 'params': {'arch': 'ViT-B-32', 'version': 'laion2b_s34b_b79k', 'max_length': 77, 'freeze': True, 'layer': 'penultimate', 'enable_cache_token_limit': True}}}
+2025-09-20 14:29:27 - experiment.training_1758371363 - INFO - [setup] Initializing model architecture
+2025-09-20 14:29:27 - experiment.training_1758371363 - INFO - [setup] Compiling model with optimizer and loss function
+2025-09-20 14:29:27 - experiment.training_1758371363 - INFO - [training] Beginning training loop
+2025-09-20 14:29:27 - experiment.training_1758371363 - INFO - Epoch 1/20, Loss: 1.000000
+2025-09-20 14:29:27 - experiment.training_1758371363 - INFO - Metric val_loss: 1.1 (step 1)
+2025-09-20 14:29:27 - experiment.training_1758371363 - INFO - Metric train_loss: 1.0 (step 1)
+2025-09-20 14:29:27 - experiment.training_1758371363 - INFO - Epoch 2/20, Loss: 0.500000
+2025-09-20 14:29:27 - experiment.training_1758371363 - INFO - Metric val_loss: 0.55 (step 2)
+2025-09-20 14:29:27 - experiment.training_1758371363 - INFO - Metric train_loss: 0.5 (step 2)
+2025-09-20 14:29:27 - experiment.training_1758371363 - INFO - Epoch 3/20, Loss: 0.333333
+2025-09-20 14:29:27 - experiment.training_1758371363 - INFO - Metric val_loss: 0.3666666666666667 (step 3)
+2025-09-20 14:29:27 - experiment.training_1758371363 - INFO - Metric train_loss: 0.3333333333333333 (step 3)
+2025-09-20 14:29:27 - experiment.training_1758371363 - INFO - Epoch 4/20, Loss: 0.250000
+2025-09-20 14:29:27 - experiment.training_1758371363 - INFO - Metric val_loss: 0.275 (step 4)
+2025-09-20 14:29:27 - experiment.training_1758371363 - INFO - Metric train_loss: 0.25 (step 4)
+2025-09-20 14:29:27 - experiment.training_1758371363 - INFO - Epoch 5/20, Loss: 0.200000
+2025-09-20 14:29:27 - experiment.training_1758371363 - INFO - Metric val_loss: 0.22000000000000003 (step 5)
+2025-09-20 14:29:27 - experiment.training_1758371363 - INFO - Metric train_loss: 0.2 (step 5)
+2025-09-20 14:29:27 - experiment.training_1758371363 - INFO - Epoch 6/20, Loss: 0.166667
+2025-09-20 14:29:27 - experiment.training_1758371363 - INFO - Metric val_loss: 0.18333333333333335 (step 6)
+2025-09-20 14:29:27 - experiment.training_1758371363 - INFO - Metric train_loss: 0.16666666666666666 (step 6)
+2025-09-20 14:29:27 - experiment.training_1758371363 - INFO - Epoch 7/20, Loss: 0.142857
+2025-09-20 14:29:27 - experiment.training_1758371363 - INFO - Metric val_loss: 0.15714285714285717 (step 7)
+2025-09-20 14:29:27 - experiment.training_1758371363 - INFO - Metric train_loss: 0.14285714285714285 (step 7)
+2025-09-20 14:29:27 - experiment.training_1758371363 - INFO - Epoch 8/20, Loss: 0.125000
+2025-09-20 14:29:27 - experiment.training_1758371363 - INFO - Metric val_loss: 0.1375 (step 8)
+2025-09-20 14:29:27 - experiment.training_1758371363 - INFO - Metric train_loss: 0.125 (step 8)
+2025-09-20 14:29:27 - experiment.training_1758371363 - INFO - Epoch 9/20, Loss: 0.111111
+2025-09-20 14:29:27 - experiment.training_1758371363 - INFO - Metric val_loss: 0.12222222222222223 (step 9)
+2025-09-20 14:29:27 - experiment.training_1758371363 - INFO - Metric train_loss: 0.1111111111111111 (step 9)
+2025-09-20 14:29:27 - experiment.training_1758371363 - INFO - Epoch 10/20, Loss: 0.100000
+2025-09-20 14:29:27 - experiment.training_1758371363 - INFO - Metric val_loss: 0.11000000000000001 (step 10)
+2025-09-20 14:29:27 - experiment.training_1758371363 - INFO - Metric train_loss: 0.1 (step 10)
+2025-09-20 14:29:27 - experiment.training_1758371363 - INFO - Epoch 11/20, Loss: 0.090909
+2025-09-20 14:29:27 - experiment.training_1758371363 - INFO - Metric val_loss: 0.1 (step 11)
+2025-09-20 14:29:27 - experiment.training_1758371363 - INFO - Metric train_loss: 0.09090909090909091 (step 11)
+2025-09-20 14:29:27 - experiment.training_1758371363 - INFO - Epoch 12/20, Loss: 0.083333
+2025-09-20 14:29:27 - experiment.training_1758371363 - INFO - Metric val_loss: 0.09166666666666667 (step 12)
+2025-09-20 14:29:27 - experiment.training_1758371363 - INFO - Metric train_loss: 0.08333333333333333 (step 12)
+2025-09-20 14:29:27 - experiment.training_1758371363 - INFO - Epoch 13/20, Loss: 0.076923
+2025-09-20 14:29:27 - experiment.training_1758371363 - INFO - Metric val_loss: 0.08461538461538462 (step 13)
+2025-09-20 14:29:27 - experiment.training_1758371363 - INFO - Metric train_loss: 0.07692307692307693 (step 13)
+2025-09-20 14:29:27 - experiment.training_1758371363 - INFO - Epoch 14/20, Loss: 0.071429
+2025-09-20 14:29:27 - experiment.training_1758371363 - INFO - Metric val_loss: 0.07857142857142858 (step 14)
+2025-09-20 14:29:27 - experiment.training_1758371363 - INFO - Metric train_loss: 0.07142857142857142 (step 14)
+2025-09-20 14:29:27 - experiment.training_1758371363 - INFO - Epoch 15/20, Loss: 0.066667
+2025-09-20 14:29:27 - experiment.training_1758371363 - INFO - Metric val_loss: 0.07333333333333333 (step 15)
+2025-09-20 14:29:27 - experiment.training_1758371363 - INFO - Metric train_loss: 0.06666666666666667 (step 15)
+2025-09-20 14:29:27 - experiment.training_1758371363 - INFO - Epoch 16/20, Loss: 0.062500
+2025-09-20 14:29:27 - experiment.training_1758371363 - INFO - Metric val_loss: 0.06875 (step 16)
+2025-09-20 14:29:27 - experiment.training_1758371363 - INFO - Metric train_loss: 0.0625 (step 16)
+2025-09-20 14:29:27 - experiment.training_1758371363 - INFO - Epoch 17/20, Loss: 0.058824
+2025-09-20 14:29:27 - experiment.training_1758371363 - INFO - Metric val_loss: 0.06470588235294118 (step 17)
+2025-09-20 14:29:27 - experiment.training_1758371363 - INFO - Metric train_loss: 0.058823529411764705 (step 17)
+2025-09-20 14:29:27 - experiment.training_1758371363 - INFO - Epoch 18/20, Loss: 0.055556
+2025-09-20 14:29:27 - experiment.training_1758371363 - INFO - Metric val_loss: 0.061111111111111116 (step 18)
+2025-09-20 14:29:27 - experiment.training_1758371363 - INFO - Metric train_loss: 0.05555555555555555 (step 18)
+2025-09-20 14:29:27 - experiment.training_1758371363 - INFO - Epoch 19/20, Loss: 0.052632
+2025-09-20 14:29:27 - experiment.training_1758371363 - INFO - Metric val_loss: 0.05789473684210527 (step 19)
+2025-09-20 14:29:27 - experiment.training_1758371363 - INFO - Metric train_loss: 0.05263157894736842 (step 19)
+2025-09-20 14:29:27 - experiment.training_1758371363 - INFO - Epoch 20/20, Loss: 0.050000
+2025-09-20 14:29:27 - experiment.training_1758371363 - INFO - Metric val_loss: 0.05500000000000001 (step 20)
+2025-09-20 14:29:27 - experiment.training_1758371363 - INFO - Metric train_loss: 0.05 (step 20)
+2025-09-20 14:29:27 - experiment.training_1758371363 - INFO - [saving] Saving model to ./models/trained
+2025-09-20 14:29:27 - experiment.training_1758371363 - INFO - Experiment 'training_1758371363' completed in 0.70 seconds

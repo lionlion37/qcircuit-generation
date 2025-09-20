@@ -1,0 +1,5 @@
+device_used: !!python/object/apply:torch.device
+- cpu
+model_type: QC_Compilation_UNet
+save_timestamp: '2025-09-20 14:46:51'
+training_epochs: 2
