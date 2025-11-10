@@ -31,7 +31,7 @@ def main():
         "--dataset", "-d",
         type=str,
         required=True,
-        help="Path to the dataset directory"
+        help="Path to the condition-specific dataset directory (e.g., ./datasets/my_dataset/unitary)"
     )
     parser.add_argument(
         "--output", "-o",

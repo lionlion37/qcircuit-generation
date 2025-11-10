@@ -15,6 +15,8 @@ from quantum_diffusion.utils import ConfigManager, Logger, setup_logging
 
 
 def main():
+    ###### Argument and config management ##############################################################################
+
     parser = argparse.ArgumentParser(description="Generate quantum circuit datasets")
     parser.add_argument(
         "--config", "-c",
@@ -32,6 +34,8 @@ def main():
         type=str,
         help="Output directory for the dataset"
     )
+
+    # Override config with command line arguments
     parser.add_argument(
         "--gate-set",
         nargs="+",
@@ -59,8 +63,9 @@ def main():
     )
     parser.add_argument(
         "--condition-type",
-        choices=["SRV", "UNITARY"],
-        help="Conditioning type (overrides config)"
+        choices=["SRV", "UNITARY", "BOTH"],
+        action="append",
+        help="Conditioning types to generate (repeat flag to specify multiple)"
     )
     parser.add_argument(
         "--device",
@@ -83,64 +88,67 @@ def main():
     logger = Logger(__name__)
     logging.getLogger("qiskit").setLevel(logging.WARNING)
 
+    # Load configuration
+    if args.config:
+        logger.info(f"Loading configuration from {args.config}")
+        config_manager = ConfigManager()
+        config = config_manager.load_config(args.config)
+    elif args.preset:
+        logger.info(f"Using preset configuration: {args.preset}")
+        config = PRESET_CONFIGS[args.preset].copy()
+    else:
+        # Use default configuration
+        logger.info("Using default configuration")
+        config = {
+            "gate_set": ['h', 'cx', 'cz', 's', 'x', 'y', 'z'],
+            "num_qubits": 3,
+            "num_samples": 10,  # 1000
+            "min_gates": 2,
+            "max_gates": 16,
+            "condition_type": "SRV",
+        }
+
+    # Override config with command line arguments
+    if args.gate_set:
+        config["gate_set"] = args.gate_set
+    if args.num_qubits:
+        config["num_qubits"] = args.num_qubits
+    if args.num_samples:
+        config["num_samples"] = args.num_samples
+    if args.min_gates:
+        config["min_gates"] = args.min_gates
+    if args.max_gates:
+        config["max_gates"] = args.max_gates
+    if args.condition_type:
+        config["condition_type"] = args.condition_type if len(args.condition_type) > 1 else args.condition_type[0]
+    if args.output:
+        config["output_path"] = args.output
+
+    logger.info(f"Dataset configuration: {config}")
+
     try:
         # Initialize generator
         generator = DatasetGenerator(device=args.device)
-        
-        # Load configuration
-        if args.config:
-            logger.info(f"Loading configuration from {args.config}")
-            config_manager = ConfigManager()
-            config = config_manager.load_config(args.config)
-        elif args.preset:
-            logger.info(f"Using preset configuration: {args.preset}")
-            config = PRESET_CONFIGS[args.preset].copy()
-        else:
-            # Use default configuration
-            logger.info("Using default configuration")
-            config = {
-                "gate_set": ['h', 'cx', 'cz', 's', 'x', 'y', 'z'],
-                "num_qubits": 3,
-                "num_samples": 10,  # 1000
-                "min_gates": 2,
-                "max_gates": 16,
-                "condition_type": "SRV",  # "UNITARY"
-            }
-        
-        # Override config with command line arguments
-        if args.gate_set:
-            config["gate_set"] = args.gate_set
-        if args.num_qubits:
-            config["num_qubits"] = args.num_qubits
-        if args.num_samples:
-            config["num_samples"] = args.num_samples
-        if args.min_gates:
-            config["min_gates"] = args.min_gates
-        if args.max_gates:
-            config["max_gates"] = args.max_gates
-        if args.condition_type:
-            config["condition_type"] = args.condition_type
-        if args.output:
-            config["output_path"] = args.output
-        
-        logger.info(f"Dataset configuration: {config}")
-        
+
         # Generate dataset
-        result = generator.generate_dataset(**config)
+        generation_results = generator.generate_dataset(**config)  # TODO: change name of training_config.yaml to config.yaml
         
         logger.info(f"Dataset generation completed successfully!")
-        logger.info(f"Dataset saved to: {args.output}")
+        for condition_name, metadata in generation_results.items():
+            logger.info(f"{condition_name}: saved to {metadata['output_path']}")
         
         # Print summary
         print("\n" + "="*50)
         print("DATASET GENERATION SUMMARY")
         print("="*50)
-        print(f"Output path: {args.output}")
+        print("Output paths:")
+        for condition_name, metadata in generation_results.items():
+            print(f"  {condition_name}: {metadata['output_path']}")
         print(f"Gate set: {config['gate_set']}")
         print(f"Number of qubits: {config['num_qubits']}")
         print(f"Number of samples: {config['num_samples']}")
         print(f"Gate range: {config['min_gates']}-{config['max_gates']}")
-        print(f"Condition type: {config['condition_type']}")
+        print(f"Condition type(s): {config['condition_type']}")
         print(f"Device used: {generator.device}")
         print("="*50)
         

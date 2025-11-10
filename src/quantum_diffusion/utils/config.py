@@ -276,7 +276,7 @@ class ConfigManager:
             "num_samples": 1000,
             "min_gates": 2,
             "max_gates": 16,
-            "condition_type": "UNITARY",
+            "condition_type": "BOTH",
             "output_path": "./datasets/example_dataset"
         }
         

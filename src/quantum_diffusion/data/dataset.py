@@ -7,7 +7,7 @@ import torch
 import numpy as np
 from pathlib import Path
 from dataclasses import asdict
-from typing import Dict, List, Optional, Union, Tuple, Any
+from typing import Dict, List, Optional, Union, Tuple, Any, Iterable
 import yaml
 from tqdm import tqdm
 
@@ -42,15 +42,55 @@ class DatasetGenerator:
         else:
             self.config = {}
             
+    @staticmethod
+    def _normalize_condition_types(condition_type: Union[str, Iterable[str], CircuitConditionType, Iterable[CircuitConditionType], None]) -> List[CircuitConditionType]:
+        """Normalize condition input into a list of CircuitConditionType enums."""
+        default_conditions = [CircuitConditionType.SRV, CircuitConditionType.UNITARY]
+        
+        if condition_type is None:
+            return default_conditions
+        
+        if isinstance(condition_type, CircuitConditionType):
+            raw_values = [condition_type]
+        elif isinstance(condition_type, str):
+            raw_values = [condition_type]
+        elif isinstance(condition_type, Iterable):
+            raw_values = list(condition_type)
+        else:
+            raise TypeError("condition_type must be a string, enum, iterable, or None")
+        
+        normalized: List[CircuitConditionType] = []
+        for value in raw_values:
+            if isinstance(value, CircuitConditionType):
+                enum_value = value
+                expanded = [enum_value]
+            else:
+                name = str(value).strip().upper()
+                if name == "BOTH":
+                    expanded = default_conditions
+                else:
+                    if not hasattr(CircuitConditionType, name):
+                        raise ValueError(f"Unknown condition type '{value}'")
+                    expanded = [getattr(CircuitConditionType, name)]
+            
+            for enum_value in expanded:
+                if enum_value not in normalized:
+                    normalized.append(enum_value)
+        
+        if not normalized:
+            raise ValueError("No valid condition types provided")
+        
+        return normalized
+    
     def generate_dataset(self, 
                         gate_set: List[str],
                         num_qubits: int,
                         num_samples: int,
                         min_gates: int = 2,
                         max_gates: int = 16,
-                        condition_type: str = "UNITARY",
-                        output_path: str = "./dataset",
-                        **kwargs) -> Dict:
+                        condition_type: Union[str, List[str], CircuitConditionType, List[CircuitConditionType]] = "SRV",
+                        output_path: str = "./datasets",
+                        **kwargs) -> Dict[str, Dict[str, Union[str, int]]]:
         """Generate a quantum circuit dataset.
         
         Args:
@@ -59,96 +99,98 @@ class DatasetGenerator:
             num_samples: Number of circuits to generate
             min_gates: Minimum number of gates per circuit
             max_gates: Maximum number of gates per circuit
-            condition_type: Type of conditioning ("SRV" or "UNITARY")
+            condition_type: Conditioning specification ("SRV", "UNITARY", "BOTH", or a list)
             output_path: Path to save the dataset
             **kwargs: Additional parameters
             
         Returns:
-            Dictionary containing dataset metadata
+            Dictionary keyed by condition name with dataset metadata
         """
         self.logger.info(f"Generating dataset with {num_samples} samples, {num_qubits} qubits")
         
-        # Create output directory
-        Path(output_path).mkdir(parents=True, exist_ok=True)
-        
-        # Setup vocabulary and tokenizer
         vocabulary = {gate: idx for gate, idx in zip(gate_set, range(len(gate_set)))}
+        output_root = Path(output_path)
+        output_root.mkdir(parents=True, exist_ok=True)
         
         try:
             simulator = Simulator(CircuitBackendType.QISKIT)
             tokenizer = CircuitTokenizer(vocabulary)
+            target_conditions = self._normalize_condition_types(condition_type)
+            multi_condition = len(target_conditions) > 1
             
-            # Convert condition type
-            condition = getattr(CircuitConditionType, condition_type.upper())
+            results: Dict[str, Dict[str, Union[str, int]]] = {}
             
-            # Generate dataset
-            self.logger.info("Starting circuit generation...")
-            tensors, ys, Us, params = generate_circuit_dataset(
-                backend=simulator.backend,
-                tokenizer=tokenizer,
-                condition=condition,
-                total_samples=num_samples,
-                num_of_qubits=num_qubits,
-                min_gates=min_gates,
-                max_gates=max_gates,
-                min_sub_gate_pool_cnt=2,
-                fixed_sub_gate_pool=gate_set
-            )
-            
-            # Setup parameters
-            dataset_params = {
-                "optimized": True,
-                "dataset_to_gpu": self.device == "cuda",
-                "random_samples": num_samples,
-                "num_of_qubits": num_qubits,
-                "min_gates": min_gates,
-                "max_gates": max_gates,
-                "gate_pool": gate_set,
-                "max_params": 0,
-                "pad_constant": len(vocabulary) + 1
-            }
-            
-            # Set store_dict based on condition type
-            if condition == CircuitConditionType.SRV:
-                dataset_params["store_dict"] = {'x': 'tensor', 'y': 'numpy'}
-            elif condition == CircuitConditionType.UNITARY:
-                dataset_params["store_dict"] = {'x': 'tensor', 'y': 'numpy', 'U': 'tensor'}
-
-            dataset = circuits_dataset.CircuitsConfigDataset(device=self.device, **dataset_params)
-            dataset.x = tensors
-            dataset.y = ys
-
-            if condition == CircuitConditionType.SRV:
-                mixed_dataset = dataset
-
-            elif condition == CircuitConditionType.UNITARY:
-                dataset.U = Us.float()
-                datasets_list = [dataset]
-
-                parameters = asdict(dataset.params_config)
-                parameters["model_scale_factor"] = 4
-
-                mixed_dataset, _ = circuits_dataset.MixedCircuitsConfigDataset.from_datasets(
-                    datasets_list,
-                    balance_maxes=[int(1e8)],
-                    pad_constant=dataset_params["pad_constant"],
-                    device=self.device,
-                    bucket_batch_size=-1,
-                    max_samples=[int(1e8)],
-                    **parameters
+            for condition in target_conditions:
+                condition_name = condition.name
+                condition_output = output_root / condition_name.lower() if multi_condition else output_root
+                condition_output.mkdir(parents=True, exist_ok=True)
+                
+                self.logger.info(f"Starting circuit generation for {condition_name}...")
+                tensors, ys, Us, _params = generate_circuit_dataset(
+                    backend=simulator.backend,
+                    tokenizer=tokenizer,
+                    condition=condition,
+                    total_samples=num_samples,
+                    num_of_qubits=num_qubits,
+                    min_gates=min_gates,
+                    max_gates=max_gates,
+                    min_sub_gate_pool_cnt=2,
+                    fixed_sub_gate_pool=gate_set
                 )
+                
+                dataset_params = {
+                    "optimized": True,
+                    "dataset_to_gpu": self.device == "cuda",
+                    "random_samples": num_samples,
+                    "num_of_qubits": num_qubits,
+                    "min_gates": min_gates,
+                    "max_gates": max_gates,
+                    "gate_pool": gate_set,
+                    "max_params": 0,
+                    "pad_constant": len(vocabulary) + 1,
+                    "store_dict": {'x': 'tensor', 'y': 'numpy'} if condition == CircuitConditionType.SRV else {'x': 'tensor', 'y': 'numpy', 'U': 'tensor'}
+                }
+                
+                dataset = circuits_dataset.CircuitsConfigDataset(device=self.device, **dataset_params)
+                dataset.x = tensors
+                dataset.y = ys
+                
+                if condition == CircuitConditionType.SRV:
+                    mixed_dataset = dataset
+                elif condition == CircuitConditionType.UNITARY:
+                    dataset.U = Us.float()
+                    datasets_list = [dataset]
 
-            # Save dataset
-            dataset_path = os.path.join(output_path, "dataset", "ds")
-            config_path = os.path.join(output_path, "config.yaml")
+                    parameters = asdict(dataset.params_config)
+                    parameters["model_scale_factor"] = 4
 
-            os.makedirs(os.path.dirname(dataset_path), exist_ok=True)
-            os.makedirs(os.path.dirname(config_path), exist_ok=True)
+                    mixed_dataset, _ = circuits_dataset.MixedCircuitsConfigDataset.from_datasets(
+                        datasets_list,
+                        balance_maxes=[int(1e8)],
+                        pad_constant=dataset_params["pad_constant"],
+                        device=self.device,
+                        bucket_batch_size=-1,
+                        max_samples=[int(1e8)],
+                        **parameters
+                    )
+                
+                dataset_path = condition_output / "dataset" / "ds"
+                config_path = condition_output / "config.yaml"
 
-            mixed_dataset.save_dataset(save_path=dataset_path, config_path=config_path)
+                dataset_path.parent.mkdir(parents=True, exist_ok=True)
+                config_path.parent.mkdir(parents=True, exist_ok=True)
 
-            self.logger.info(f"Dataset saved to {output_path}")
-            return True
+                mixed_dataset.save_dataset(save_path=str(dataset_path), config_path=str(config_path))  # TODO: doesn't save pad_constant when condition = "SRV"
+
+                self.logger.info(f"{condition_name} dataset saved to {condition_output}")
+                results[condition_name] = {
+                    "condition": condition_name,
+                    "output_path": str(condition_output),
+                    "config_path": str(config_path),
+                    "num_samples": int(tensors.shape[0]),
+                }
+            
+            return results
             
         except Exception as e:
             self.logger.error(f"Error generating dataset: {e}")
@@ -161,7 +203,7 @@ class DatasetGenerator:
             configs: List of dataset configuration dictionaries
             
         Returns:
-            List of metadata dictionaries for each dataset
+            List of metadata dictionaries (per condition) for each config
         """
         results = []
         for i, config in enumerate(configs):
@@ -201,8 +243,15 @@ class DatasetLoader:
             if not os.path.exists(config_path):
                 raise FileNotFoundError(f"Config file not found at {config_path}")
             
-            # Load dataset using genQC
-            dataset = circuits_dataset.MixedCircuitsConfigDataset.from_config_file(
+            with open(config_path, 'r') as cfg_file:
+                cfg_data = yaml.safe_load(cfg_file)
+            target = cfg_data.get("target", "")
+            if target.endswith("MixedCircuitsConfigDataset"):
+                dataset_cls = circuits_dataset.MixedCircuitsConfigDataset
+            else:
+                dataset_cls = circuits_dataset.CircuitsConfigDataset
+
+            dataset = dataset_cls.from_config_file(
                 config_path=config_path,
                 device=self.device,
                 save_path=os.path.join(dataset_path, "dataset", "ds"),
@@ -299,7 +348,7 @@ PRESET_CONFIGS = {
     },
     "clifford_3q_srv": {
         "gate_set": ['h', 'cx', 'cz', 's', 'x', 'y', 'z'],
-        "num_qubits": 3,
+        "num_qubits": 5,
         "num_samples": 1000,
         "min_gates": 2,
         "max_gates": 16,

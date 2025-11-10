@@ -57,7 +57,7 @@ generator.generate_dataset(
     gate_set=['h', 'cx', 'cz', 's'],
     num_qubits=3,
     num_samples=1000,
-    condition_type="UNITARY",
+    condition_type="BOTH",
     output_path="./my_dataset"
 )
 ```
@@ -67,6 +67,9 @@ Or use the command line:
 qd-generate --preset clifford_3q_unitary --num-samples 1000 --output ./my_dataset
 ```
 
+This creates separate folders for SRV and UNITARY conditioning (for example `./my_dataset/srv` and `./my_dataset/unitary`).
+```
+
 ### 2. Train a Diffusion Model
 
 ```python
@@ -74,7 +77,7 @@ from quantum_diffusion import DiffusionTrainer, DatasetLoader
 
 # Load dataset
 loader = DatasetLoader()
-dataset = loader.load_dataset('./my_dataset')
+dataset = loader.load_dataset('./my_dataset/unitary')
 dataloaders = loader.get_dataloaders(dataset, batch_size=32)
 
 # Train model
@@ -86,7 +89,7 @@ trainer.train(dataloaders, save_path='./my_model')
 
 Or use the command line:
 ```bash
-qd-train --dataset ./my_dataset --preset standard --epochs 20 --output ./my_model
+qd-train --dataset ./my_dataset/unitary --preset standard --epochs 20 --output ./my_model
 ```
 
 ### 3. Evaluate the Model
@@ -107,7 +110,7 @@ results = evaluator.evaluate_model(
 
 Or use the command line:
 ```bash
-qd-evaluate --model ./my_model --dataset ./my_dataset --output ./evaluation_results
+qd-evaluate --model ./my_model --dataset ./my_dataset/unitary --output ./evaluation_results
 ```
 
 ## Project Structure
@@ -137,9 +140,11 @@ num_qubits: 3
 num_samples: 1000
 min_gates: 2
 max_gates: 16
-condition_type: "UNITARY"
+condition_type: "BOTH"
 output_path: "./datasets/my_dataset"
 ```
+
+When `condition_type` is `"BOTH"` (the default), datasets are saved under `output_path/srv` and `output_path/unitary`.
 
 ### Training Configuration (`configs/training/`)
 ```yaml

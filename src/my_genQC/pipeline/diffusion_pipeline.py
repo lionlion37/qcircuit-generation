@@ -113,8 +113,9 @@ class DiffusionPipeline(Pipeline):
         add_config = config["params"].pop("add_config", None)
 
         pipeline = instantiate_from_config(config)
-        
-        if exists(pipeline.add_config):
+
+        # if exists(pipeline.add_config):
+        if "dataset" in add_config and "params" in add_config["dataset"]:
             pipeline.add_config = add_config
             
             params = add_config["dataset"]["params"]
@@ -329,7 +330,6 @@ class DiffusionPipeline(Pipeline):
          
         #do the cond embedding with CLIP                     
         y = y.to(self.device, non_blocking=self.non_blocking)  
-        U = U.to(self.device, non_blocking=self.non_blocking)  
         
         if self.enable_guidance_train and train: 
             rnd_y = torch.empty((b,), device=self.device).bernoulli_(p=1.0-self.guidance_train_p).type(torch.int64)

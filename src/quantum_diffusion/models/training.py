@@ -123,8 +123,10 @@ class DiffusionTrainer:
                 tokenizer = CircuitTokenizer(vocabulary)
             
             # Setup model configuration
-            model_config = self.config["model"].copy()
+            model_config = copy.deepcopy(self.config["model"])
             model_params = model_config["params"]
+            model_type = model_config.get("type", "QC_Compilation_UNet")
+            self.uses_unitary_conditioning = model_type == "QC_Compilation_UNet"
             
             # Update num_clrs based on tokenizer
             model_params["num_clrs"] = len(tokenizer.vocabulary) + 2  # +1 for background, +1 for padding
@@ -132,7 +134,8 @@ class DiffusionTrainer:
             # Create unitary encoder config if needed
             if "unitary_encoder_config" in model_params:
                 unitary_config = model_params["unitary_encoder_config"]
-                model_params["unitary_encoder_config"] = Unitary_encoder_config(**unitary_config)
+                if isinstance(unitary_config, dict):
+                    model_params["unitary_encoder_config"] = Unitary_encoder_config(**unitary_config)
             
             # Setup timestamp
             time_stamp = time.strftime('%m/%d/%y %H:%M:%S', time.localtime())
@@ -140,13 +143,13 @@ class DiffusionTrainer:
             model_config["target"] = f"genQC.models.unet_qc.{model_config['type']}"
             
             # Create model
-            if model_config["type"] == "QC_Compilation_UNet":
+            if self.uses_unitary_conditioning:
                 self.model = QC_Compilation_UNet.from_config(model_config, self.device, freeze=False)
             else:
                 self.model = QC_Cond_UNet.from_config(model_config, self.device, freeze=False)
             
             # Setup scheduler
-            scheduler_config = self.config["scheduler"].copy()
+            scheduler_config = copy.deepcopy(self.config["scheduler"])
             scheduler_config["params"]["device"] = self.device
             scheduler_config["target"] = f"genQC.scheduler.scheduler_ddim.{scheduler_config['type']}"
             
@@ -158,7 +161,8 @@ class DiffusionTrainer:
             # Setup pipeline
             training_config = self.config["training"]
             
-            self.pipeline = DiffusionPipeline_Compilation(
+            pipeline_cls = DiffusionPipeline_Compilation if self.uses_unitary_conditioning else DiffusionPipeline
+            self.pipeline = pipeline_cls(
                 scheduler=self.scheduler,
                 model=self.model,
                 text_encoder=text_encoder,
@@ -241,12 +245,8 @@ class DiffusionTrainer:
         try:
             Path(save_path).mkdir(parents=True, exist_ok=True)
             
-            # Save model
-            model_path = os.path.join(save_path, "model.pt")
-            if hasattr(self.pipeline, 'save_model'):
-                self.pipeline.save_model(model_path)
-            else:
-                torch.save(self.model.state_dict(), model_path)
+            # Save model and config to the same directory
+            self.pipeline.store_pipeline(config_path=save_path + "/", save_path=save_path + "/")
             
             # Save configuration
             config_path = os.path.join(save_path, "training_config.yaml")
@@ -279,7 +279,7 @@ class DiffusionTrainer:
         try:
             # Load configuration
             model_folder = Path(model_path).parent
-            config_path = os.path.join(model_folder, "training_config.yaml")
+            config_path = os.path.join(model_folder, "config.yaml")
             if os.path.exists(config_path):
                 with open(config_path, 'r') as f:
                     self.config = yaml.safe_load(f)
@@ -424,50 +424,229 @@ class ModelManager:
 PRESET_TRAINING_CONFIGS = {
     "quick_test": {
         "model": {
-            "type": "QC_Compilation_UNet",
+          "type": "QC_Compilation_UNet",
+          'save_type': 'pt',
+          "params": {
+              "model_features": [128, 128, 256],
+              "clr_dim": 8,
+              "num_clrs": 9,  # len(['h','cx','cz','s','x','y','z']) + 2
+              "t_emb_size": 256,
+              "cond_emb_size": 512,
+              "num_heads": [8, 8, 2],
+              "num_res_blocks": [2, 2, 4],
+              "transformer_depths": [1, 2, 1],
+              "unitary_encoder_config": {
+                  "cond_emb_size": 512,
+                  "model_features": [2, 32, 64, 512],
+                  "num_heads": 8,
+                  "transformer_depths": [2, 2],
+                  "dropout": 0.2,
+              },
+          },
+      },
+      "training": {
+          "learning_rate": 1e-4,
+          "optimizer": "Adam",
+          "loss": "MSELoss",
+          "num_epochs": 5,
+          "batch_size": 32,
+          "enable_guidance_train": True,
+          "guidance_train_p": 0.1,
+          "cached_text_enc": True,
+      },
+      "text_encoder": {
+          "type": "CachedFrozenOpenCLIPEmbedder",
+          "params": {
+              "arch": "ViT-B-32",
+              "version": "laion2b_s34b_b79k",
+              "max_length": 77,
+              "freeze": True,
+              "layer": "penultimate",
+              "enable_cache_token_limit": True,
+          },
+      },
+      "scheduler": {
+          "type": "DDIMScheduler",
+          "params": {
+              "num_train_timesteps": 1000,
+              "beta_start": 0.0001,
+              "beta_end": 0.02,
+              "beta_schedule": "cos_alpha",
+              "input_perturbation": 0.1,
+              "prediction_type": "epsilon",
+              "eta": 1,
+          },
+      },
+      "dataset": {
+          "store_dict": {'x': 'tensor', 'y': 'numpy', 'U': 'tensor'},
+          "optimized": True,
+          "dataset_to_gpu": "${device:cuda?true:false}",
+          "random_samples": 512,
+          "num_of_qubits": 3,
+          "min_gates": 2,
+          "max_gates": 16,
+          "gate_pool": ['h', 'cx', 'cz', 's', 'x', 'y', 'z'],
+          "max_params": 0,
+          "pad_constant": 8,  # len(vocabulary) + 1
+      },
+    },
+    "srv_quick_test": {
+        "model": {
+            "type": "QC_Cond_UNet",
+            'save_type': 'pt',
             "params": {
-                "model_features": [64, 64, 128],
+                "model_features": [128, 128, 256],
                 "clr_dim": 8,
-                "t_emb_size": 128,
-                "cond_emb_size": 256
-            }
+                "num_clrs": 9,
+                "t_emb_size": 256,
+                "cond_emb_size": 512,
+                "num_heads": [8, 8, 2],
+                "num_res_blocks": [2, 2, 2],
+                "transformer_depths": [1, 1, 1]
+            },
         },
         "training": {
             "learning_rate": 1e-3,
-            "num_epochs": 3,
-            "batch_size": 16
-        }
+            "optimizer": "Adam",
+            "loss": "MSELoss",
+            "num_epochs": 5,
+            "batch_size": 32,
+            "enable_guidance_train": True,
+            "guidance_train_p": 0.1,
+            "cached_text_enc": True,
+        },
+        "text_encoder": {
+            "type": "CachedFrozenOpenCLIPEmbedder",
+            "params": {
+                "arch": "ViT-B-32",
+                "version": "laion2b_s34b_b79k",
+                "max_length": 77,
+                "freeze": True,
+                "layer": "penultimate",
+                "enable_cache_token_limit": True,
+            },
+        },
+        "scheduler": {
+            "type": "DDIMScheduler",
+            "params": {
+                "num_train_timesteps": 1000,
+                "beta_start": 0.0001,
+                "beta_end": 0.02,
+                "beta_schedule": "cos_alpha",
+                "input_perturbation": 0.1,
+                "prediction_type": "epsilon",
+                "eta": 1,
+            },
+        },
+        "dataset": {
+            "store_dict": {'x': 'tensor', 'y': 'numpy'},
+            "optimized": True,
+            "dataset_to_gpu": "${device:cuda?true:false}",
+            "random_samples": 512,
+            "num_of_qubits": 3,
+            "min_gates": 2,
+            "max_gates": 16,
+            "gate_pool": ['h', 'cx', 'cz', 's', 'x', 'y', 'z'],
+            "max_params": 0,
+            "pad_constant": 8,
+        },
     },
+
     "standard_training": {
         "model": {
             "type": "QC_Compilation_UNet",
+            'save_type': 'pt',
             "params": {
                 "model_features": [128, 128, 256],
                 "clr_dim": 8,
                 "t_emb_size": 256,
-                "cond_emb_size": 512
-            }
+                "cond_emb_size": 512,
+
+                "unitary_encoder_config": {
+                    "cond_emb_size": 512,
+                    "model_features": [2, 32, 64, 512],
+                    "num_heads": 8,
+                    "transformer_depths": [2, 2],
+                    "dropout": 0.2,
+                }
+            },
         },
         "training": {
             "learning_rate": 1e-4,
             "num_epochs": 20,
             "batch_size": 32
-        }
+        },
+        "text_encoder": {
+            "type": "CachedFrozenOpenCLIPEmbedder",
+            "params": {
+                "arch": "ViT-B-32",
+                "version": "laion2b_s34b_b79k",
+                "max_length": 77,
+                "freeze": True,
+                "layer": "penultimate",
+                "enable_cache_token_limit": True
+            },
+        },
+        "scheduler": {
+            "type": "DDIMScheduler",
+            "params": {
+                "num_train_timesteps": 1000,
+                "beta_start": 0.0001,
+                "beta_end": 0.02,
+                "beta_schedule": "cos_alpha",
+                "input_perturbation": 0.1,
+                "prediction_type": "epsilon",
+                "eta": 1,
+            },
+        },
     },
+
     "large_model": {
         "model": {
             "type": "QC_Compilation_UNet",
+            'save_type': 'pt',
             "params": {
                 "model_features": [256, 256, 512],
                 "clr_dim": 16,
                 "t_emb_size": 512,
-                "cond_emb_size": 1024
-            }
+                "cond_emb_size": 1024,
+
+                "unitary_encoder_config": {
+                    "cond_emb_size": 1024,
+                    "model_features": [2, 32, 64, 1024],
+                    "num_heads": 8,
+                    "transformer_depths": [2, 2],
+                    "dropout": 0.2,
+                }
+            },
         },
         "training": {
             "learning_rate": 5e-5,
             "num_epochs": 50,
             "batch_size": 16
-        }
+        },
+        "text_encoder": {
+            "type": "CachedFrozenOpenCLIPEmbedder",
+            "params": {
+                "arch": "ViT-B-32",
+                "version": "lan2b_s34b_b79k",
+                "max_length": 77,
+                "freeze": True,
+                "layer": "penultimate",
+                "enable_cache_token_limit": True
+            },
+        },
+        "scheduler": {
+            "type": "DDIMScheduler",
+            "params": {
+                "num_train_timesteps": 1000,
+                "beta_start": 0.0001,
+                "beta_end": 0.02,
+                "beta_schedule": "cos_alpha",
+                "input_perturbation": 0.1,
+                "prediction_type": "epsilon",
+                "eta": 1,
+            },
+        },
     }
 }
