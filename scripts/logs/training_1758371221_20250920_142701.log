@@ -1,4 +1,0 @@
-2025-09-20 14:27:04 - experiment.training_1758371221 - INFO - Starting experiment: training_1758371221
-2025-09-20 14:27:04 - experiment.training_1758371221 - INFO - Configuration: ../configs/training/compilation_training.yaml
-2025-09-20 14:27:04 - experiment.training_1758371221 - INFO - [setup] Initializing model architecture
-2025-09-20 14:27:04 - experiment.training_1758371221 - INFO - Experiment 'training_1758371221' completed in 0.01 seconds
