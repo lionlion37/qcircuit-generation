@@ -1,0 +1,7 @@
+gate_set: ['h', 'cx', 'cz', 's', 'x', 'y', 'z']
+num_qubits: 5
+num_samples: 100000
+min_gates: 4
+max_gates: 20
+condition_type: SRV
+output_path: ./datasets/srv_dataset

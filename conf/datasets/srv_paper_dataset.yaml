@@ -1,0 +1,49 @@
+# Extended Data Table I. Page 10.
+
+variant: q3
+
+variants:
+  q3:  # 6 MB
+    num_qubits: 3
+    min_gates: 2
+    max_gates: 16
+    num_samples: 32768
+  q4:
+    num_qubits: 4
+    min_gates: 3
+    max_gates: 20
+    num_samples: 65536
+  q5:
+    num_qubits: 5
+    min_gates: 4
+    max_gates: 28
+    num_samples: 131072
+  q6:
+    num_qubits: 6
+    min_gates: 5
+    max_gates: 40
+    num_samples: 262144
+  q7:
+    num_qubits: 7
+    min_gates: 6
+    max_gates: 52
+    num_samples: 524288
+  q8:
+    num_qubits: 8
+    min_gates: 7
+    max_gates: 52
+    num_samples: 1048576
+
+gate_set: ['h', 'cx']
+num_qubits: ${.variants.${.variant}.num_qubits}
+num_samples: ${.variants.${.variant}.num_samples}
+min_gates: ${.variants.${.variant}.min_gates}
+max_gates: ${.variants.${.variant}.max_gates}
+condition_type: SRV
+output_path: ./datasets/paper/srv_${.variants.${.variant}.num_qubits}q_dataset
+
+hydra:
+  mode: MULTIRUN
+  sweeper:
+    params:
+      datasets.variant: q3,q4,q5,q6,q7,q8
