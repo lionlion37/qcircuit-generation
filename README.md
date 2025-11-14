@@ -3,27 +3,74 @@
 QuantumDiffusion generates quantum circuit datasets, trains diffusion models on those circuits, and evaluates the trained models with fidelity and circuit-level statistics. The repository vendors the genQC stack under `src/my_genQC`, so every script can run locally without extra services.
 
 ## Setup
-1. Use Python 3.10+ inside a virtual environment.
-2. Install dependencies with `pip install -r requirements.txt`; this provides PyTorch, Qiskit, Hydra, genQC, and supporting tooling.
-3. Execute all commands from the repository root so the scripts can import the modules under `src/`.
+- Use Python 3.10+ inside a virtual environment.
+- Install dependencies with `pip install -r requirements.txt`; this provides PyTorch, Qiskit, Hydra, genQC, and supporting tooling.
+- Run every command from the repository root so the scripts can import `src/` and Hydra can locate `conf/`.
+- Hydra writes runs into `./outputs/<date>/<time>` by default. Pass `hydra.run.dir=.` `hydra.output_subdir=null` or use absolute paths in the configs when you want artifacts to land directly in the repo.
+
+## Configuration system
+Hydra drives every entrypoint through `conf/config.yaml`:
+
+```yaml
+defaults:
+  - datasets: default
+  - training: default
+  - evaluation: default
+```
+
+- `conf/datasets/` – parameters accepted by `DatasetGenerator` (gate sets, qubits, SRV/UNITARY/BOTH conditioning, sample counts, output paths, etc.).
+- `conf/training/` – `general`, `model`, `training`, `scheduler`, and `text_encoder` blocks used by `DiffusionTrainer` and the dataset loader.
+- `conf/evaluation/` – dataset/model locations plus guidance, sampling, and Hugging Face overrides for `evaluate_model.py`.
+
+Select a different preset with `datasets=clifford_3q_unitary`, `training=quick_test_srv`, `evaluation=comprehensive`, etc. Any field can be overridden inline, e.g. `training.training.num_epochs=5`. To add a reusable configuration, drop a new YAML file inside the corresponding folder and refer to it by name.
 
 ## Workflow
 ### 1. Generate circuits
-Run `python scripts/generate_dataset.py --config configs/datasets/clifford_unitary.yaml --output ./datasets/clifford_unitary`. The script instantiates `DatasetGenerator`, calls into the genQC simulator/tokenizer, and writes tensors plus a `config.yaml` per condition (SRV, UNITARY, or BOTH). Override gates, qubits, samples, and conditioning through CLI flags, or switch to a preset such as `--preset clifford_3q_unitary`.
+`scripts/generate_dataset.py` reads `cfg["datasets"]` and calls `DatasetGenerator`. Use Hydra overrides to pick a preset and tweak parameters:
+
+```bash
+python scripts/generate_dataset.py \
+  hydra.run.dir=. hydra.output_subdir=null \
+  datasets=clifford_3q_unitary \
+  datasets.num_samples=2048 \
+  datasets.output_path=./datasets/clifford_3q_unitary
+```
+
+The generator emits one folder per requested condition (SRV, UNITARY, or BOTH), each containing `config.yaml` plus the serialized tensors under `dataset/ds/`.
 
 ### 2. Train diffusion models
-Use `python scripts/train_model.py --dataset ./datasets/clifford_unitary/unitary --config configs/training/compilation_training.yaml --output ./models/compilation_run`. Training loads the condition-specific dataset, builds the requested UNet and scheduler, and stores checkpoints in `./models`. Flags like `--preset quick_test`, `--epochs`, `--batch-size`, `--learning-rate`, `--resume`, and `--device` override the config on the fly.
+`scripts/train_model.py` consumes `cfg["training"]`. The `general` block wires up the dataset path, output location, and experiment names, while `model`, `training`, `scheduler`, and `text_encoder` map directly onto the trainer. CLI flags `--device`, `--resume`, and `--verbose` are still available.
+
+```bash
+python scripts/train_model.py \
+  --device cuda \
+  hydra.run.dir=. hydra.output_subdir=null \
+  training=quick_test_srv \
+  training.general.dataset=./datasets/srv_dataset \
+  training.general.output_path=./models/quick_test
+```
+
+Artifacts (model weights, embedder cache, metadata, logs) are written to `training.general.output_path`, and `ModelManager` registers the run using `general.model_name`.
 
 ### 3. Evaluate models
-Evaluate with `python scripts/evaluate_model.py --model ./models/compilation_run --dataset ./datasets/clifford_unitary/unitary --config configs/evaluation/comprehensive.yaml --output ./evaluation/compilation_run`. The evaluator can regenerate samples or reuse held-out data, computes fidelity, gate-depth statistics, diversity metrics, and optionally plots results. Limit the workload with `--num-samples`, pick specific `--metrics`, or skip figures via `--no-plots`.
+`scripts/evaluate_model.py` evaluates a saved pipeline (local or Hugging Face) against a dataset produced by step 1. Configure it through `cfg["evaluation"]`:
 
-## Configuration
-Configuration files live under `configs/` (`datasets/`, `training/`, `evaluation/`). Every script accepts `--config` with a YAML file or `--preset` names defined in `ConfigManager` (e.g., `clifford_3q_unitary`, `quick_test`, `comprehensive`). CLI flags always override the loaded configuration, which makes it straightforward to sweep parameters without editing the YAML files.
+```bash
+python scripts/evaluate_model.py \
+  hydra.run.dir=. hydra.output_subdir=null \
+  evaluation=comprehensive \
+  evaluation.dataset=./datasets/srv_dataset \
+  evaluation.model_dir=./models/quick_test/default_model_srv \
+  evaluation.num_samples=128 \
+  evaluation.model_params.sample_steps=50
+```
+
+Set `evaluation.hf_repo=<org/model>` if you want to pull a remote pipeline; leave `evaluation.model_dir` empty in that case. The script reports fidelity metrics, gate statistics, and entanglement histograms while reusing genQC’s native tooling.
 
 ## Repository layout
+- `conf/`: Hydra defaults plus dataset/training/evaluation presets.
 - `src/quantum_diffusion/`: dataset generation, training, evaluation, and utility modules that wrap genQC.
-- `src/my_genQC/`: minimal, vendored copy of genQC used by the pipelines.
-- `scripts/`: runnable entrypoints for dataset generation, training, and evaluation (default outputs are `./datasets`, `./models`, and `./evaluation`).
-- `configs/`: ready-to-use YAML configs referenced in the commands above.
+- `src/my_genQC/`: vendored genQC stack used by every pipeline.
+- `scripts/`: entrypoints (`generate_dataset.py`, `train_model.py`, `evaluate_model.py`) and sample artifacts under `scripts/datasets`, `scripts/models`, `scripts/logs`, and `scripts/outputs`.
 - `notebooks/`: exploratory workflows and debugging references.
 - `tests/`: regression tests for the core package.
