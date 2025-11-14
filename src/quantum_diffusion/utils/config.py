@@ -18,7 +18,7 @@ class ConfigManager:
         Args:
             config_dir: Directory containing configuration files
         """
-        self.config_dir = Path(config_dir) if config_dir else Path("configs")
+        self.config_dir = Path(config_dir) if config_dir else Path("conf")
         self.yaml_saver = YAML()
         
     def load_config(self, config_path: Union[str, Path]) -> Dict[str, Any]:
@@ -84,24 +84,6 @@ class ConfigManager:
             Preset configuration dictionary
         """
         preset_configs = {
-            "dataset": {
-                "clifford_3q_unitary": {
-                    "gate_set": ['h', 'cx', 'cz', 's', 'x', 'y', 'z'],
-                    "num_qubits": 3,
-                    "num_samples": 1000,
-                    "min_gates": 2,
-                    "max_gates": 16,
-                    "condition_type": "UNITARY"
-                },
-                "clifford_4q_srv": {
-                    "gate_set": ['h', 'cx', 'cz', 's', 'x', 'y', 'z'],
-                    "num_qubits": 4,
-                    "num_samples": 2000,
-                    "min_gates": 3,
-                    "max_gates": 20,
-                    "condition_type": "SRV"
-                }
-            },
             "training": {
                 "quick_test": {
                     "model": {
@@ -244,7 +226,7 @@ class ConfigManager:
         return self.merge_configs(base_config, experiment_params)
     
     def setup_config_directory(self, config_dir: Optional[str] = None) -> Path:
-        """Setup configuration directory with example configs.
+        """Setup configuration directory with example conf.
         
         Args:
             config_dir: Directory to setup (uses default if None)
@@ -262,7 +244,7 @@ class ConfigManager:
         (self.config_dir / "training").mkdir(exist_ok=True)
         (self.config_dir / "evaluation").mkdir(exist_ok=True)
         
-        # Create example configs if they don't exist
+        # Create example conf if they don't exist
         self._create_example_configs()
         
         return self.config_dir

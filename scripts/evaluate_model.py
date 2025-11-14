@@ -1,231 +1,269 @@
 #!/usr/bin/env python3
-"""Script for evaluating trained diffusion models."""
+"""Minimal evaluation script that reuses genQC's native utilities."""
+
+from __future__ import annotations
 
 import argparse
 import sys
-from pathlib import Path
+import os
 import time
+import ast
+from collections import Counter
+from pathlib import Path
+import hydra
 
-# Add the src directory to path
+import numpy as np
+import torch
+
+# Ensure local src/ is importable
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
-from quantum_diffusion.models import ModelManager
-from quantum_diffusion.data import DatasetLoader
-from quantum_diffusion.evaluation import Evaluator
-from quantum_diffusion.utils import ConfigManager, Logger, setup_logging
+from src.my_genQC.inference.eval_metrics import UnitaryFrobeniusNorm, UnitaryInfidelityNorm
+from src.my_genQC.inference.evaluation_helper import get_unitaries, get_srvs
+from src.my_genQC.inference.sampling import generate_compilation_tensors, generate_tensors, decode_tensors_to_backend
+from src.my_genQC.pipeline.diffusion_pipeline import DiffusionPipeline
+from src.my_genQC.platform.simulation import Simulator, CircuitBackendType
+from src.my_genQC.platform.tokenizer.circuits_tokenizer import CircuitTokenizer
+from src.my_genQC.utils.misc_utils import infer_torch_device, get_entanglement_bins
+from src.my_genQC.dataset import circuits_dataset
+from src.my_genQC.models.config_model import ConfigModel
+from src.my_genQC.utils.config_loader import load_config
 
 
-def main():
-    parser = argparse.ArgumentParser(description="Evaluate trained diffusion models")
-    parser.add_argument(
-        "--model", "-m",
-        type=str,
-        required=True,
-        help="Path to the trained model or model name"
+def load_dataset(dataset_path: Path, device: torch.device):
+    """Load a saved quantum circuit dataset.
+
+    Args:
+        dataset_path: Path to the saved dataset
+        **kwargs: Additional loading parameters
+
+    Returns:
+        Loaded dataset object
+    """
+
+    config_path = os.path.join(dataset_path, "config.yaml")
+
+    if not os.path.exists(config_path):
+        raise FileNotFoundError(f"Config file not found at {config_path}")
+
+    cfg_data = load_config(config_path)
+    target = cfg_data.get("target", "")
+    if target.endswith("MixedCircuitsConfigDataset"):
+        dataset_cls = circuits_dataset.MixedCircuitsConfigDataset
+    else:
+        dataset_cls = circuits_dataset.CircuitsConfigDataset
+
+    # Load dataset using genQC
+    dataset = dataset_cls.from_config_file(
+        config_path=config_path,
+        device=device,
+        save_path=os.path.join(dataset_path, "dataset", "ds")
     )
-    parser.add_argument(
-        "--config", "-c",
-        type=str,
-        help="Path to evaluation configuration file"
+
+    # logger.info(f"Dataset loaded from {dataset_path}")
+    return dataset
+
+
+def parse_srv_targets(labels: np.ndarray) -> torch.Tensor:
+    """Extract SRV vectors from stored prompt strings."""
+    srv_list = []
+    for label in labels:
+        text = str(label)
+        start = text.find("[")
+        end = text.find("]", start)
+        if start == -1 or end == -1:
+            raise ValueError(f"Could not parse SRV from label: {text}")
+        srv = ast.literal_eval(text[start:end+1])
+        srv_list.append(srv)
+    return torch.tensor(srv_list, dtype=torch.long)
+
+
+def entanglement_histogram(srvs: torch.Tensor, num_qubits: int) -> tuple[list[float], list[str], float]:
+    """Return histogram over entanglement bins defined in genQC."""
+    if srvs.numel() == 0:
+        return [], [], 0.0
+
+    bins, labels = get_entanglement_bins(num_qubits)
+    mapping = {}
+    for idx, bucket in enumerate(bins):
+        for vector in bucket:
+            mapping[tuple(vector)] = idx
+
+    counts = Counter(mapping.get(tuple(vec.tolist()), -1) for vec in srvs)
+    total = srvs.shape[0]
+    hist = [counts.get(i, 0) / total for i in range(len(labels))]
+    other_ratio = counts.get(-1, 0) / total
+    return hist, labels, other_ratio
+
+
+def load_pipeline(model_dir: Path | None, repo_id: str | None, device: torch.device):
+    if repo_id:
+        return DiffusionPipeline.from_pretrained(repo_id=repo_id, device=device)
+
+    if not model_dir:
+        raise ValueError("Provide either --model-dir or --hf-repo.")
+
+    model_dir = model_dir.resolve()
+    config_path = model_dir if model_dir.is_dir() else model_dir.parent
+    cfg_file = config_path / "config.yaml"
+    if not cfg_file.exists():
+        raise FileNotFoundError(f"Missing pipeline config at {cfg_file}")
+
+    # DiffusionPipeline expects a directory string ending with '/'
+    return DiffusionPipeline.from_config_file(config_path=str(config_path) + "/", device=device)
+
+
+def to_complex(unitary_tensor: torch.Tensor) -> torch.Tensor:
+    """Convert stacked real/imag tensors [B,2,N,N] to complex matrices."""
+    if unitary_tensor.dim() != 4 or unitary_tensor.shape[1] != 2:
+        raise ValueError(f"Unexpected unitary tensor shape {unitary_tensor.shape}")
+    real = unitary_tensor[:, 0]
+    imag = unitary_tensor[:, 1]
+    return torch.complex(real, imag)
+
+
+@hydra.main(config_path="../conf", config_name="config.yaml", version_base=None)
+def main(cfg):
+    cfg = cfg["evaluation"]
+
+    # parser = argparse.ArgumentParser(description="Evaluate a genQC diffusion pipeline using native helpers.")
+    # parser.add_argument("--device", choices=["cpu", "cuda"], help="Device to run evaluation on.")
+    # args = parser.parse_args()
+
+    device = torch.device(infer_torch_device())
+    dataset = load_dataset(Path(cfg.dataset), device=device)
+
+    pipeline = load_pipeline(
+        model_dir=Path(cfg.model_dir) if cfg.model_dir else None,
+        repo_id=cfg.hf_repo,
+        device=device,
     )
-    parser.add_argument(
-        "--dataset", "-d",
-        type=str,
-        help="Path to test dataset"
-    )
-    parser.add_argument(
-        "--reference-circuits",
-        type=str,
-        help="Path to reference circuits for comparison"
-    )
-    parser.add_argument(
-        "--output", "-o",
-        type=str,
-        default="./evaluation_results",
-        help="Output directory for evaluation results"
-    )
-    parser.add_argument(
-        "--num-samples",
-        type=int,
-        help="Number of samples to generate for evaluation (overrides config)"
-    )
-    parser.add_argument(
-        "--metrics",
-        nargs="+",
-        choices=["fidelity", "circuit_properties", "statistical_analysis", "diversity_metrics"],
-        help="Specific metrics to evaluate (overrides config)"
-    )
-    parser.add_argument(
-        "--no-plots",
-        action="store_true",
-        help="Don't create evaluation plots"
-    )
-    parser.add_argument(
-        "--device",
-        choices=["cpu", "cuda"],
-        help="Device to use for evaluation"
-    )
-    parser.add_argument(
-        "--verbose", "-v",
-        action="store_true",
-        help="Verbose output"
-    )
-    
-    args = parser.parse_args()
-    
-    # Setup logging
-    setup_logging(
-        log_level="DEBUG" if args.verbose else "INFO",
-        console_output=True
-    )
-    logger = Logger(__name__)
-    
-    try:
-        # Initialize evaluator
-        evaluator = Evaluator(config_path=args.config, device=args.device)
-        
-        # Override config with command line arguments
-        if args.num_samples:
-            evaluator.config["generation"]["num_samples"] = args.num_samples
-        if args.metrics:
-            # Reset all metrics to False
-            for metric in evaluator.config["metrics"]:
-                evaluator.config["metrics"][metric] = False
-            # Enable specified metrics
-            for metric in args.metrics:
-                evaluator.config["metrics"][metric] = True
-        if args.no_plots:
-            evaluator.config["output"]["create_plots"] = False
-        
-        logger.info(f"Evaluation configuration: {evaluator.config}")
-        
-        # Load model
-        logger.info(f"Loading model from {args.model}")
-        model_manager = ModelManager()
-        
-        # Check if it's a model name or path
-        if Path(args.model).exists():
-            # It's a path
-            model_trainer = model_manager.load_model(args.model, device=args.device)
-        else:
-            # It's a model name
-            model_trainer = model_manager.load_model(args.model, device=args.device)
-        
-        # Load test dataset
-        test_dataset = None
-        if args.dataset:
-            logger.info(f"Loading test dataset from {args.dataset}")
-            dataset_loader = DatasetLoader(device=args.device)
-            test_dataset = dataset_loader.load_dataset(args.dataset)
-        
-        # Load reference circuits
-        reference_circuits = None
-        if args.reference_circuits:
-            logger.info(f"Loading reference circuits from {args.reference_circuits}")
-            # This would need to be implemented based on the file format
-            # For now, we'll pass None
-            logger.warning("Reference circuit loading not implemented yet")
-        
-        # Create output directory
-        output_dir = Path(args.output)
-        output_dir.mkdir(parents=True, exist_ok=True)
-        
-        # Evaluate model
-        logger.info("Starting model evaluation...")
-        start_time = time.time()
-        
-        results = evaluator.evaluate_model(
-            model_trainer=model_trainer,
-            test_dataset=test_dataset,
-            reference_circuits=reference_circuits,
-            output_dir=str(output_dir)
+
+    pipeline.guidance_sample_mode = "rescaled"
+    pipeline.scheduler.set_timesteps(cfg.model_params.sample_steps)
+
+    samples = min(cfg.num_samples, dataset.x.shape[0])
+    if samples == 0:
+        raise ValueError("Dataset is empty – nothing to evaluate.")
+
+    system_size = dataset.x.shape[1]
+    max_gates = dataset.x.shape[2]
+    num_qubits = getattr(dataset.params_config, "num_of_qubits", system_size)
+
+    is_compilation = hasattr(dataset, "U") and dataset.store_dict.get("U") == "tensor"
+
+    print("Starting tensor generation...")
+
+    if is_compilation:
+        unitary_conditions = dataset.U[:samples].to(device)
+        prompts = [str(p) for p in dataset.y[:samples]]
+
+        tensors_out = generate_compilation_tensors(
+            pipeline=pipeline,
+            prompt=prompts,
+            U=unitary_conditions,
+            samples=samples,
+            system_size=system_size,
+            num_of_qubits=num_qubits,
+            max_gates=max_gates,
+            g=cfg.model_params.guidance_scale,
+            auto_batch_size=cfg.model_params.auto_batch_size,
+            enable_params=True,
+            no_bar=False,  # shows diffusion steps
         )
-        
-        evaluation_time = time.time() - start_time
-        
-        logger.info(f"Evaluation completed in {evaluation_time:.2f} seconds")
-        logger.info(f"Results saved to: {output_dir}")
-        
-        # Print summary
-        print("\n" + "="*60)
-        print("EVALUATION SUMMARY")
-        print("="*60)
-        print(f"Model: {args.model}")
-        print(f"Output directory: {output_dir}")
-        print(f"Evaluation time: {evaluation_time:.2f} seconds")
-        
-        # Print key metrics
-        if "generated_circuits_info" in results:
-            num_generated = results["generated_circuits_info"]["num_generated"]
-            print(f"Generated circuits: {num_generated}")
-        
-        if "fidelity_metrics" in results:
-            fidelity = results["fidelity_metrics"]
-            if "avg_circuit_fidelity" in fidelity:
-                print(f"Average circuit fidelity: {fidelity['avg_circuit_fidelity']:.4f}")
-            if "avg_state_fidelity" in fidelity:
-                print(f"Average state fidelity: {fidelity['avg_state_fidelity']:.4f}")
-        
-        if "circuit_properties" in results and "generated" in results["circuit_properties"]:
-            props = results["circuit_properties"]["generated"]
-            if "depth_stats" in props:
-                avg_depth = props["depth_stats"]["mean"]
-                print(f"Average circuit depth: {avg_depth:.2f}")
-            if "total_gates_stats" in props:
-                avg_gates = props["total_gates_stats"]["mean"]
-                print(f"Average gate count: {avg_gates:.2f}")
-        
-        if "diversity_metrics" in results:
-            diversity = results["diversity_metrics"]["diversity_metrics"]
-            if "unique_circuits" in diversity:
-                unique_circuits = diversity["unique_circuits"]
-                total_circuits = results.get("generated_circuits_info", {}).get("num_generated", 0)
-                if total_circuits > 0:
-                    uniqueness_ratio = unique_circuits / total_circuits
-                    print(f"Circuit uniqueness: {uniqueness_ratio:.2%} ({unique_circuits}/{total_circuits})")
-        
-        # Print evaluation metrics enabled
-        enabled_metrics = [metric for metric, enabled in evaluator.config["metrics"].items() if enabled]
-        print(f"Evaluated metrics: {', '.join(enabled_metrics)}")
-        
-        print("="*60)
-        
-        # Print file locations
-        print("\nGenerated files:")
-        if (output_dir / "evaluation_results.yaml").exists():
-            print(f"  - Full results: {output_dir / 'evaluation_results.yaml'}")
-        if (output_dir / "evaluation_summary.csv").exists():
-            print(f"  - Summary: {output_dir / 'evaluation_summary.csv'}")
-        
-        plots_dir = output_dir / "plots"
-        if plots_dir.exists() and list(plots_dir.glob("*.png")):
-            print(f"  - Plots: {plots_dir}")
-            for plot_file in plots_dir.glob("*.png"):
-                print(f"    - {plot_file.name}")
-        
-        # Detailed results
-        if args.verbose:
-            print("\nDetailed Results:")
-            for section, data in results.items():
-                if section in ["evaluation_timestamp", "config", "model_info"]:
-                    continue
-                print(f"\n{section.upper().replace('_', ' ')}:")
-                if isinstance(data, dict):
-                    for key, value in data.items():
-                        if isinstance(value, (int, float)):
-                            print(f"  {key}: {value}")
-                        elif isinstance(value, dict):
-                            print(f"  {key}:")
-                            for subkey, subvalue in value.items():
-                                if isinstance(subvalue, (int, float)):
-                                    print(f"    {subkey}: {subvalue}")
-        
-    except Exception as e:
-        logger.error(f"Evaluation failed: {e}")
-        if args.verbose:
-            import traceback
-            traceback.print_exc()
-        sys.exit(1)
+    else:
+        prompts = [str(p) for p in dataset.y[:samples]]
+
+        tensors_out = generate_tensors(
+            pipeline=pipeline,
+            prompt=prompts,
+            samples=samples,
+            system_size=system_size,
+            num_of_qubits=num_qubits,
+            max_gates=max_gates,
+            g=cfg.model_params.guidance_scale,
+            auto_batch_size=cfg.model_params.auto_batch_size,
+            enable_params=False,
+            no_bar=False,  # shows diffusion steps
+        )
+
+    print("Finished tensor generation.")
+
+    if isinstance(tensors_out, tuple):
+        tensors, params = tensors_out
+    else:
+        tensors, params = tensors_out, None
+
+    vocabulary = {gate: idx for idx, gate in enumerate(dataset.gate_pool)}
+    tokenizer = CircuitTokenizer(vocabulary)
+    simulator = Simulator(CircuitBackendType.QISKIT)
+
+    decoded_circuits, _ = decode_tensors_to_backend(
+        simulator=simulator,
+        tokenizer=tokenizer,
+        tensors=tensors,
+        params=params,
+        silent=True,
+        n_jobs=1,
+        filter_errs=False,
+    )
+    valid = [(idx, qc) for idx, qc in enumerate(decoded_circuits) if qc is not None]
+    if not valid:
+        raise RuntimeError("Decoding failed for all samples; cannot compute metrics.")
+
+    valid_indices = [idx for idx, _ in valid]
+    backend_circuits = [qc for _, qc in valid]
+    err_cnt = len(decoded_circuits) - len(backend_circuits)
+
+    print("==== genQC Evaluation ====")
+    print(f"Samples requested: {samples}")
+    print(f"Decoded circuits : {len(backend_circuits)}")
+    print(f"Decode failures  : {err_cnt}")
+
+    if is_compilation:
+        idx_tensor = torch.as_tensor(
+            valid_indices,
+            device=dataset.U.device,
+            dtype=torch.long,
+        )
+        target_complex = to_complex(dataset.U[:samples][idx_tensor].cpu())
+
+        predicted = get_unitaries(simulator, backend_circuits, n_jobs=1)
+        predicted = torch.from_numpy(np.stack(predicted)).to(target_complex.dtype)
+
+        frob_metric = UnitaryFrobeniusNorm().distance(predicted, target_complex)
+        infid_metric = UnitaryInfidelityNorm().distance(predicted, target_complex)
+
+        print(f"Frobenius  mean/std: {frob_metric.mean().item():.6f} / {frob_metric.std(unbiased=False).item():.6f}")
+        print(f"Infidelity mean/std: {infid_metric.mean().item():.6f} / {infid_metric.std(unbiased=False).item():.6f}")
+    else:
+        print("No target unitaries in dataset; running SRV evaluation.")
+        target_srvs = parse_srv_targets(dataset.y[:samples])[valid_indices]
+        predicted_srvs = torch.tensor(
+            get_srvs(simulator, backend_circuits, n_jobs=1),
+            dtype=torch.long,
+        )
+
+        if target_srvs.shape != predicted_srvs.shape:
+            raise RuntimeError(f"SRV shape mismatch: target {target_srvs.shape} vs predicted {predicted_srvs.shape}")
+
+        exact_match = (predicted_srvs == target_srvs).all(dim=1)
+        per_qubit = (predicted_srvs == target_srvs).float().mean(dim=0)
+
+        print(f"SRV exact-match rate : {exact_match.float().mean().item():.4f}")
+        print("Per-qubit rank acc   : " + ", ".join(f"q{i}={acc:.3f}" for i, acc in enumerate(per_qubit.tolist())))
+
+        pred_hist, ent_labels, pred_other = entanglement_histogram(predicted_srvs, num_qubits)
+        targ_hist, _, targ_other = entanglement_histogram(target_srvs, num_qubits)
+
+        if ent_labels:
+            print("Entanglement-bin distribution (target | pred):")
+            for label, t_frac, p_frac in zip(ent_labels, targ_hist, pred_hist):
+                print(f"  {label:>20}: {t_frac:6.2%} | {p_frac:6.2%}")
+            if targ_other > 0 or pred_other > 0:
+                print(f"  {'Other/invalid':>20}: {targ_other:6.2%} | {pred_other:6.2%}")
+
+    print("==========================")
 
 
 if __name__ == "__main__":

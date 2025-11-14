@@ -1,0 +1,9 @@
+dataset: ./datasets/srv_dataset  # clifford_3q_srv
+model_dir: ./models/trained/default_model_srv
+hf_repo: null
+num_samples: 64
+
+model_params:
+  guidance_scale: 10.0
+  sample_steps: 20
+  auto_batch_size: 512

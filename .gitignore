@@ -1,0 +1,53 @@
+# Byte-compiled / optimized files
+__pycache__/
+src/quantum_diffusion/utils/__pycache_/_
+*.py[cod]
+*$py.class
+*.pyc
+
+# Build / packaging
+.Python
+build/
+dist/
+*.egg-info/
+pip-wheel-metadata/
+
+# Virtual environments
+.venv/
+venv/
+env/
+.env/
+
+# IDE / editor metadata
+.idea/
+.vscode/
+*.swp
+
+# OS / tooling noise
+.DS_Store
+Thumbs.db
+
+# Logs & reports
+*.log
+coverage.xml
+.coverage*
+htmlcov/
+scripts/logs/
+
+# Notebook artifacts
+.ipynb_checkpoints/
+
+# Datasets / model artifacts
+datasets/
+scripts/datasets/**/dataset/
+scripts/models/
+*.pt
+*.pth
+*.ckpt
+*.safetensors
+
+# Caches
+.mypy_cache/
+.pytest_cache/
+.cache/
+

@@ -12,7 +12,7 @@ from ..models.config_model import ConfigModel
 
 # %% ../../src/pipeline/diffusion_pipeline.ipynb 3
 class DiffusionPipeline(Pipeline):   
-    """A `Pipeline` for diffusion models. Implements train and inference functions. Diffusion parameters are defined inside a `Scheduler` object."""
+    """A `Pipeline` for diffusion training. Implements train and inference functions. Diffusion parameters are defined inside a `Scheduler` object."""
     non_blocking = False
     
     def __init__(self, 

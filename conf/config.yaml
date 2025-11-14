@@ -1,0 +1,4 @@
+defaults:
+  - datasets: default
+  - evaluation: default
+  - training: default

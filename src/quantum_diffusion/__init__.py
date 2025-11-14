@@ -14,7 +14,7 @@ __author__ = "Quantum Diffusion Team"
 
 # Core functionality imports
 from .data import DatasetGenerator, DatasetLoader, PRESET_CONFIGS
-from .models import DiffusionTrainer, ModelManager, PRESET_TRAINING_CONFIGS
+from .training import DiffusionTrainer, ModelManager
 from .evaluation import Evaluator, MetricsCalculator
 from .utils import ConfigManager, Logger, setup_logging
 

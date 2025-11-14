@@ -1,0 +1,54 @@
+model:
+  type: QC_Compilation_UNet
+  save_type: pt
+
+  params:
+    model_features: [128, 128, 256]
+    clr_dim: 8
+    num_clrs: 9  # len(['h','cx','cz','s','x','y','z']) + 2
+    t_emb_size: 256
+    cond_emb_size: 512
+    num_heads: [8, 8, 2]
+    num_res_blocks: [2, 2, 4]
+    transformer_depths: [1, 2, 1]
+
+    unitary_encoder_config:
+      cond_emb_size: 512
+      model_features: [2, 32, 64, 512]
+      num_heads: 8
+      transformer_depths: [2, 2]
+      dropout: 0.2
+
+training:
+  learning_rate: 1e-4
+  optimizer: Adam
+  loss: MSELoss
+  num_epochs: 5
+  batch_size: 32
+  enable_guidance_train: true
+  guidance_train_p: 0.1
+  cached_text_enc: true
+  output_path: ./models/trained/
+  model_name: quick_test_unitary
+  experiment_name: quick_test_unitary_experiment
+
+text_encoder:
+  type: CachedFrozenOpenCLIPEmbedder
+  params:
+    arch: ViT-B-32
+    version: laion2b_s34b_b79k
+    max_length: 77
+    freeze: true
+    layer: penultimate
+    enable_cache_token_limit: true
+
+scheduler:
+  type: DDIMScheduler
+  params:
+    num_train_timesteps: 1000
+    beta_start: 0.0001
+    beta_end: 0.02
+    beta_schedule: cos_alpha
+    input_perturbation: 0.1
+    prediction_type: epsilon
+    eta: 1

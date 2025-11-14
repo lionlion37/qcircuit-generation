@@ -35,7 +35,7 @@ class Scheduler(abc.ABC):
 
         _config = copy.deepcopy(config)
         
-        if exists(device): _config["device"] = device   # for loading sub-models
+        if exists(device): _config["device"] = device   # for loading sub-training
         else:              device = _config.pop("device", "cpu")
 
         if "beta_schedule" in _config["params"]:

@@ -3,6 +3,7 @@
 import os
 import time
 import sys
+import copy
 import torch
 import numpy as np
 from pathlib import Path
@@ -180,7 +181,7 @@ class DatasetGenerator:
                 dataset_path.parent.mkdir(parents=True, exist_ok=True)
                 config_path.parent.mkdir(parents=True, exist_ok=True)
 
-                mixed_dataset.save_dataset(save_path=str(dataset_path), config_path=str(config_path))  # TODO: doesn't save pad_constant when condition = "SRV"
+                mixed_dataset.save_dataset(save_path=str(dataset_path), config_path=str(config_path))
 
                 self.logger.info(f"{condition_name} dataset saved to {condition_output}")
                 results[condition_name] = {
@@ -225,7 +226,7 @@ class DatasetLoader:
         """
         self.device = device or infer_torch_device() if 'infer_torch_device' in globals() else 'cpu'
         self.logger = Logger(__name__)
-        self.config = config
+        self.config = dict(config)
     
     def load_dataset(self, dataset_path: str, **kwargs):
         """Load a saved quantum circuit dataset.
@@ -263,9 +264,18 @@ class DatasetLoader:
 
             # Setup text encoder
             time_stamp = time.strftime('%m/%d/%y %H:%M:%S', time.localtime())
-            text_encoder_config = self.config["text_encoder"].copy()
+            text_encoder_config = copy.deepcopy(dict(self.config["text_encoder"]))
             text_encoder_config["save_datetime"] = time_stamp
-            text_encoder_config["target"] = f"genQC.models.frozen_open_clip.{text_encoder_config['type']}"
+
+            target = text_encoder_config.get("target")
+            if not target:
+                module_path = text_encoder_config.pop("module", "my_genQC.models.frozen_open_clip")
+                encoder_type = text_encoder_config.get("type")
+                if not encoder_type:
+                    raise ValueError("Text encoder config requires 'type' or explicit 'target'.")
+                target = f"{module_path}.{encoder_type}"
+
+            text_encoder_config["target"] = target
 
             self.text_encoder = ConfigModel.from_config(text_encoder_config, self.device)
 
