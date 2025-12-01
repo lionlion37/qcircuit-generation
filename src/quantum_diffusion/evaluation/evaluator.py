@@ -1,4 +1,4 @@
-"""Comprehensive evaluation and testing framework for quantum diffusion models."""
+"""Comprehensive evaluation and testing framework for quantum diffusion training."""
 
 import os
 import time
@@ -17,10 +17,13 @@ import warnings
 # Quantum computing imports
 from qiskit import QuantumCircuit
 from qiskit.quantum_info import Statevector, Operator, process_fidelity, state_fidelity
-from qiskit.transpiler import PassManager
 
 # genQC imports
-from src.my_genQC.platform.simulation import Simulator
+from src.my_genQC.platform.simulation import Simulator, CircuitBackendType
+from src.my_genQC.platform.tokenizer.circuits_tokenizer import CircuitTokenizer
+from src.my_genQC.inference.sampling import generate_compilation_tensors, decode_tensors_to_backend
+from src.my_genQC.inference.evaluation_helper import get_unitaries
+from src.my_genQC.inference.eval_metrics import UnitaryFrobeniusNorm, UnitaryInfidelityNorm
 from src.my_genQC.utils.misc_utils import infer_torch_device
 
 from ..utils.logging import Logger
@@ -206,7 +209,7 @@ class MetricsCalculator:
 
 
 class Evaluator:
-    """Comprehensive evaluator for quantum diffusion models."""
+    """Comprehensive evaluator for quantum diffusion training."""
     
     def __init__(self, config_path: Optional[str] = None, device: Optional[str] = None):
         """Initialize the evaluator.
@@ -219,6 +222,9 @@ class Evaluator:
         self.config_manager = ConfigManager()
         self.logger = Logger(__name__)
         self.metrics_calculator = MetricsCalculator(device)
+        self.simulator = Simulator(CircuitBackendType.QISKIT)
+        self.frobenius_metric = UnitaryFrobeniusNorm()
+        self.infidelity_metric = UnitaryInfidelityNorm()
         
         if config_path:
             self.config = self.config_manager.load_config(config_path)
@@ -278,29 +284,51 @@ class Evaluator:
         }
         
         try:
-            # Generate circuits from model
-            generated_circuits = self._generate_circuits(model_trainer)
+            if test_dataset is None:
+                raise ValueError("Evaluation requires a dataset that provides unitary conditions.")
+            
+            generation_ctx = self._prepare_generation_context(test_dataset)
+            generation_output = self._generate_circuits(model_trainer, generation_ctx)
+            generated_circuits = generation_output['circuits']
+
             results['generated_circuits_info'] = {
+                'num_requested': generation_output['requested'],
                 'num_generated': len(generated_circuits),
+                'decode_failures': generation_output['decode_failures'],
                 'generation_config': self.config['generation']
             }
+
+            reference_set = reference_circuits
+            if (not reference_set and 
+                self.config.get('comparison', {}).get('compare_to_training', False) and
+                test_dataset is not None):
+                reference_set = self._load_reference_circuits_from_dataset(
+                    test_dataset,
+                    generation_ctx['tokenizer'],
+                    generation_output['requested']
+                )
             
             # Circuit properties evaluation
             if self.config['metrics']['circuit_properties']:
                 results['circuit_properties'] = self._evaluate_circuit_properties(
-                    generated_circuits, test_dataset, reference_circuits
+                    generated_circuits, reference_set
                 )
             
             # Fidelity evaluation
-            if self.config['metrics']['fidelity'] and reference_circuits:
-                results['fidelity_metrics'] = self._evaluate_fidelity(
-                    generated_circuits, reference_circuits
+            if self.config['metrics']['fidelity']:
+                fidelity_metrics = self._evaluate_fidelity(
+                    generated_circuits=generated_circuits,
+                    unitary_targets=generation_ctx.get('unitary_conditions'),
+                    valid_indices=generation_output['valid_indices'],
+                    reference_circuits=reference_set
                 )
+                if fidelity_metrics:
+                    results['fidelity_metrics'] = fidelity_metrics
             
             # Statistical analysis
             if self.config['metrics']['statistical_analysis']:
                 results['statistical_analysis'] = self._statistical_analysis(
-                    generated_circuits, test_dataset, reference_circuits
+                    generated_circuits, test_dataset, reference_set
                 )
             
             # Diversity metrics
@@ -330,16 +358,147 @@ class Evaluator:
             'training_epochs': model_trainer.config.get('training', {}).get('num_epochs', 'Unknown')
         }
     
-    def _generate_circuits(self, model_trainer) -> List[QuantumCircuit]:
-        """Generate circuits using the trained model."""
-        # This would depend on the specific genQC API for generation
-        # For now, return empty list as placeholder
-        self.logger.warning("Circuit generation from model not implemented yet")
-        return []
+    def _generate_circuits(self, model_trainer, ctx: Dict[str, Any]) -> Dict[str, Any]:
+        """Generate circuits using my_genQC sampling utilities."""
+        pipeline = getattr(model_trainer, "pipeline", None)
+        if pipeline is None:
+            raise ValueError("Model trainer pipeline is not initialized. Call setup_model before evaluation.")
+
+        unitary_conditions = ctx.get("unitary_conditions")
+        if unitary_conditions is None:
+            raise ValueError("Dataset does not provide unitary conditions required for compilation evaluation.")
+
+        num_samples = unitary_conditions.shape[0]
+        prompt = self.config["generation"].get("prompt", "quantum circuit compilation")
+        guidance_scale = self.config["generation"].get("guidance_scale", 1.0)
+        auto_batch_size = self.config["generation"].get("auto_batch_size", 512)
+
+        tensors_out = generate_compilation_tensors(
+            pipeline=pipeline,
+            prompt=prompt,
+            U=unitary_conditions.to(pipeline.device),
+            samples=num_samples,
+            system_size=ctx["system_size"],
+            num_of_qubits=ctx["num_qubits"],
+            max_gates=ctx["max_gates"],
+            g=guidance_scale,
+            auto_batch_size=auto_batch_size,
+            enable_params=True,
+            no_bar=not self.config["output"].get("verbose", True)
+        )
+
+        if isinstance(tensors_out, tuple):
+            generated_tensors, params = tensors_out
+        else:
+            generated_tensors, params = tensors_out, None
+
+        generated_tensors = generated_tensors.detach().cpu()
+        if params is not None:
+            params = params.detach().cpu()
+
+        backend_objs, _ = decode_tensors_to_backend(
+            simulator=self.simulator,
+            tokenizer=ctx["tokenizer"],
+            tensors=generated_tensors,
+            params=params,
+            silent=not self.config["output"].get("verbose", True),
+            n_jobs=self.config["generation"].get("decode_workers", 1),
+            filter_errs=False
+        )
+
+        valid_indices = [idx for idx, qc in enumerate(backend_objs) if qc is not None]
+        valid_circuits = [backend_objs[idx] for idx in valid_indices]
+        decode_failures = len(backend_objs) - len(valid_circuits)
+
+        return {
+            "circuits": valid_circuits,
+            "valid_indices": valid_indices,
+            "decode_failures": decode_failures,
+            "requested": num_samples
+        }
+    
+    def _prepare_generation_context(self, dataset) -> Dict[str, Any]:
+        """Collect shapes, tokenizers, and conditions from the dataset."""
+        if not hasattr(dataset, "x"):
+            raise ValueError("Dataset missing tensor encodings (x).")
+        
+        num_samples = min(
+            self.config["generation"].get("num_samples", 100),
+            dataset.x.shape[0]
+        )
+
+        if num_samples <= 0:
+            raise ValueError("Dataset does not contain any samples for evaluation.")
+        
+        system_size = dataset.x.shape[1]
+        max_gates = dataset.x.shape[2]
+        num_qubits = getattr(dataset.params_config, "num_of_qubits", system_size)
+
+        gate_pool = getattr(dataset, "gate_pool", None)
+        if not gate_pool:
+            raise ValueError("Dataset does not expose a gate pool required for decoding.")
+        
+        vocabulary = {gate: idx for idx, gate in enumerate(gate_pool)}
+        tokenizer = CircuitTokenizer(vocabulary)
+
+        if not hasattr(dataset, "U"):
+            raise ValueError("Dataset does not contain unitary tensors (attribute 'U'); required for compilation evaluation.")
+        unitary_conditions = dataset.U[:num_samples].to(self.device)
+        
+        return {
+            "num_samples": num_samples,
+            "system_size": system_size,
+            "max_gates": max_gates,
+            "num_qubits": num_qubits,
+            "tokenizer": tokenizer,
+            "unitary_conditions": unitary_conditions
+        }
+    
+    def _load_reference_circuits_from_dataset(self, dataset, tokenizer: CircuitTokenizer, max_cnt: int) -> List[QuantumCircuit]:
+        """Decode reference circuits from the dataset tensors."""
+        max_cnt = min(max_cnt, dataset.x.shape[0])
+        tensors = dataset.x[:max_cnt].detach().cpu()
+        params = None
+        if hasattr(dataset, "store_dict") and "params" in dataset.store_dict:
+            params = getattr(dataset, "params")[:max_cnt].detach().cpu()
+        
+        backend_objs, _ = decode_tensors_to_backend(
+            simulator=self.simulator,
+            tokenizer=tokenizer,
+            tensors=tensors,
+            params=params,
+            silent=True,
+            n_jobs=self.config["generation"].get("decode_workers", 1),
+            filter_errs=False
+        )
+        
+        return [qc for qc in backend_objs if qc is not None]
+    
+    def _unitary_tensor_to_complex(self, tensor: torch.Tensor) -> torch.Tensor:
+        """Convert stacked real/imag tensors into complex matrices."""
+        if tensor.dim() == 4:
+            real, imag = tensor[:, 0], tensor[:, 1]
+        elif tensor.dim() == 3:
+            real, imag = tensor[0], tensor[1]
+        else:
+            raise ValueError(f"Unexpected unitary tensor shape: {tensor.shape}")
+        return torch.complex(real, imag)
+    
+    def _compute_predicted_unitaries(self, circuits: List[QuantumCircuit]) -> torch.Tensor:
+        """Simulate circuits to retrieve their unitary matrices."""
+        if not circuits:
+            return torch.empty(0, dtype=torch.complex64, device=self.device)
+        
+        matrices = get_unitaries(
+            simulator=self.simulator,
+            backend_obj_list=circuits,
+            n_jobs=self.config["generation"].get("unitary_jobs", 1)
+        )
+        matrices_np = np.stack(matrices).astype(np.complex64)
+        return torch.from_numpy(matrices_np).to(self.device)
     
     def _evaluate_circuit_properties(self, 
                                    generated_circuits: List[QuantumCircuit],
-                                   test_dataset,
                                    reference_circuits: Optional[List[QuantumCircuit]]) -> Dict:
         """Evaluate basic circuit properties."""
         results = {}
@@ -386,39 +545,59 @@ class Evaluator:
     
     def _evaluate_fidelity(self, 
                           generated_circuits: List[QuantumCircuit],
-                          reference_circuits: List[QuantumCircuit]) -> Dict:
-        """Evaluate fidelity between generated and reference circuits."""
-        results = {
-            'circuit_fidelities': [],
-            'state_fidelities': [],
-            'avg_circuit_fidelity': 0.0,
-            'avg_state_fidelity': 0.0
-        }
-        
-        num_comparisons = min(len(generated_circuits), len(reference_circuits))
-        
-        for i in range(num_comparisons):
-            # Circuit fidelity
-            circ_fidelity = self.metrics_calculator.circuit_fidelity(
-                generated_circuits[i], reference_circuits[i]
-            )
-            results['circuit_fidelities'].append(circ_fidelity)
+                          unitary_targets: Optional[torch.Tensor],
+                          valid_indices: List[int],
+                          reference_circuits: Optional[List[QuantumCircuit]]) -> Dict:
+        """Evaluate fidelity using my_genQC unitary metrics, with circuit fallback."""
+        if unitary_targets is not None and generated_circuits:
+            target_subset = unitary_targets[valid_indices].to(self.device)
+            target_complex = self._unitary_tensor_to_complex(target_subset)
+            predicted = self._compute_predicted_unitaries(generated_circuits)
+            if predicted.shape[0] == 0:
+                return {}
             
-            # State fidelity
-            state_fidelity = self.metrics_calculator.state_vector_fidelity(
-                generated_circuits[i], reference_circuits[i]
-            )
-            results['state_fidelities'].append(state_fidelity)
+            frob = self.frobenius_metric.distance(predicted, target_complex)
+            infidelity = self.infidelity_metric.distance(predicted, target_complex)
+            
+            return {
+                'frobenius_mean': float(frob.mean().item()),
+                'frobenius_std': float(frob.std(unbiased=False).item()) if frob.numel() > 1 else 0.0,
+                'infidelity_mean': float(infidelity.mean().item()),
+                'infidelity_std': float(infidelity.std(unbiased=False).item()) if infidelity.numel() > 1 else 0.0,
+                'avg_circuit_fidelity': float(1 - infidelity.mean().item()),
+                'avg_state_fidelity': float(1 - infidelity.mean().item())
+            }
         
-        if results['circuit_fidelities']:
-            results['avg_circuit_fidelity'] = np.mean(results['circuit_fidelities'])
-            results['circuit_fidelity_std'] = np.std(results['circuit_fidelities'])
+        if reference_circuits:
+            results = {
+                'circuit_fidelities': [],
+                'state_fidelities': [],
+                'avg_circuit_fidelity': 0.0,
+                'avg_state_fidelity': 0.0
+            }
+            
+            num_comparisons = min(len(generated_circuits), len(reference_circuits))
+            for i in range(num_comparisons):
+                circ_fidelity = self.metrics_calculator.circuit_fidelity(
+                    generated_circuits[i], reference_circuits[i]
+                )
+                results['circuit_fidelities'].append(circ_fidelity)
+                
+                state_fidelity = self.metrics_calculator.state_vector_fidelity(
+                    generated_circuits[i], reference_circuits[i]
+                )
+                results['state_fidelities'].append(state_fidelity)
+            
+            if results['circuit_fidelities']:
+                results['avg_circuit_fidelity'] = float(np.mean(results['circuit_fidelities']))
+                results['circuit_fidelity_std'] = float(np.std(results['circuit_fidelities']))
+            
+            if results['state_fidelities']:
+                results['avg_state_fidelity'] = float(np.mean(results['state_fidelities']))
+                results['state_fidelity_std'] = float(np.std(results['state_fidelities']))
+            return results
         
-        if results['state_fidelities']:
-            results['avg_state_fidelity'] = np.mean(results['state_fidelities'])
-            results['state_fidelity_std'] = np.std(results['state_fidelities'])
-        
-        return results
+        return {}
     
     def _statistical_analysis(self,
                             generated_circuits: List[QuantumCircuit],
@@ -624,16 +803,16 @@ def evaluate_multiple_models(model_paths: List[str],
                            test_dataset,
                            output_base_dir: str,
                            config_path: Optional[str] = None) -> Dict[str, Any]:
-    """Evaluate multiple models and compare results.
+    """Evaluate multiple training and compare results.
     
     Args:
-        model_paths: List of paths to trained models
+        model_paths: List of paths to trained training
         test_dataset: Test dataset for evaluation
         output_base_dir: Base directory for outputs
         config_path: Evaluation configuration path
         
     Returns:
-        Comparison results across all models
+        Comparison results across all training
     """
     evaluator = Evaluator(config_path)
     results = {}

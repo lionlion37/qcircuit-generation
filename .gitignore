@@ -38,12 +38,11 @@ scripts/logs/
 .ipynb_checkpoints/
 
 # Datasets / model artifacts
-scripts/datasets/**/dataset/
-scripts/models/
 *.pt
 *.pth
 *.ckpt
 *.safetensors
+data/
 
 # Caches
 .mypy_cache/

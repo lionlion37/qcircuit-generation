@@ -181,7 +181,7 @@ class MixedCircuitsConfigDataset(CircuitsConfigDataset, MixedCachedOpenCLIPDatas
     #-----------------------------------
     
     @staticmethod
-    def _preprocess_dataset(dataset, device, balance_max, max_samples, i, shuffle, make_unique, pad_constant, 
+    def _preprocess_dataset(dataset, device, balance_max, max_samples, i, shuffle, make_unique, pad_constant,
                             model_scale_factor, parameters, max_gates, max_qubits):
 
         dataset = dataset.to(device)

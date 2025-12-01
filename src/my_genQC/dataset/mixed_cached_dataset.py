@@ -245,7 +245,7 @@ class MixedCachedOpenCLIPDataset(CachedOpenCLIPDataset):
     
     #-----------------------------------
     
-    def get_dataloaders(self, batch_size, text_encoder, p_valid=0.1, y_on_cpu=False, return_tensor_datasets=False, shuffle=True, shuffle_cpu_copy=True, caching=True):
+    def get_dataloaders(self, batch_size, text_encoder, p_valid=0.1, y_on_cpu=False, return_tensor_datasets=False, shuffle=True, shuffle_cpu_copy=True, caching=True, text_encoder_njobs=1):
         #-------------------------
         # caching
         
@@ -259,10 +259,10 @@ class MixedCachedOpenCLIPDataset(CachedOpenCLIPDataset):
                                                                make_unique=False)    # ... z_proc is `'z' and all other 'c'
         if caching:
             if self.bucket_batch_size <= 0:        
-                y_proc = self.caching(y_proc, y_on_cpu=y_on_cpu)
+                y_proc = self.caching(y_proc, y_on_cpu=y_on_cpu, text_encoder_njobs=text_encoder_njobs)
                           
             else:                    
-                y_proc = self.caching([yi.reshape((-1)) for yi in y_proc], y_on_cpu=y_on_cpu)
+                y_proc = self.caching([yi.reshape((-1)) for yi in y_proc], y_on_cpu=y_on_cpu, text_encoder_njobs=text_encoder_njobs)
                 y_proc = y_proc.reshape((-1, self.bucket_batch_size))
         
         #-------------------------

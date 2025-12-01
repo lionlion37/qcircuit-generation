@@ -33,14 +33,14 @@ class FrozenOpenCLIPEmbedder(ConfigModel):
         "penultimate"
     ]
 
-    njobs = 1
+    njobs = 1  # TODO: check how to do this with config
 
     def __init__(self, arch="ViT-B-32", version="datacomp_xl_s13b_b90k", max_length=77, freeze=True, layer="penultimate", **kwargs):
         super().__init__()        
         
         assert layer in self.LAYERS     
         self.params_config = FrozenOpenCLIPEmbedderConfig(arch, version, max_length, freeze, layer)
-        
+        # TODO: try pushing to cuda and find out why the device is hardcoded here
         model, _, _ = open_clip.create_model_and_transforms(arch, device="cpu", pretrained=version)
         self.device = "cpu"
         
@@ -161,8 +161,15 @@ class CachedFrozenOpenCLIPEmbedder(FrozenOpenCLIPEmbedder):
     
     @torch.inference_mode()
     def generate_cache(self, str_list: list=None, tokens=None, cached_empty_token_index=None, b_size=2048, y_on_cpu=False):       
-        self.cached_empty_token_index = cached_empty_token_index       
-        if exists(str_list): self.cached_tokens = self.tokenize_and_push_to_device(str_list)      
+        self.cached_empty_token_index = cached_empty_token_index
+
+        # TODO: njobs of tokenizer under construction
+
+        if exists(str_list):
+            self.njobs = 8
+            self.cached_tokens = self.tokenize_and_push_to_device(str_list)
+            self.njobs = 1
+
         elif exists(tokens): self.cached_tokens = tokens
         else: raise RuntimeError("please provide str_list or tokens")
         

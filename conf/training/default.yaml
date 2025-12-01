@@ -3,6 +3,10 @@ general:
   model_name: default_model_srv
   experiment_name: default_experiment
   dataset: ./datasets/srv_dataset # ./datasets/clifford_3q_srv_small
+  njobs: 8
+  device: auto
+  resume: false
+  verbose: true
 
 model:
   type: QC_Cond_UNet
@@ -23,7 +27,7 @@ training:
   optimizer: Adam
   loss: MSELoss
   num_epochs: 50
-  batch_size: 256
+  batch_size: 512
   enable_guidance_train: true
   guidance_train_p: 0.1
   cached_text_enc: true
@@ -37,6 +41,7 @@ text_encoder:
     freeze: true
     layer: penultimate
     enable_cache_token_limit: true
+    njobs: 8
 
 scheduler:
   type: DDIMScheduler

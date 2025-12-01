@@ -30,7 +30,7 @@ class CachedOpenCLIPDataset(ConfigDataset):
         y_proc = self.caching(y_proc)
         return x_proc, y_proc, *z
     
-    def caching(self, y_proc, y_on_cpu=False):
+    def caching(self, y_proc, y_on_cpu=False, text_encoder_njobs=1):
         print("[INFO]: Generate cache: converting tensors to str and tokenize")   
         
         print(" - to str list")  
@@ -46,8 +46,14 @@ class CachedOpenCLIPDataset(ConfigDataset):
             
         else: raise NotImplementedError()
                             
-        print(" - tokenize_and_push_to_device")  
+        print(" - tokenize_and_push_to_device")
+        print(f"Tokenizing with {text_encoder_njobs} job(s)")
+
+        # TODO: njobs under construction
+        self.text_encoder.njobs = text_encoder_njobs
         y_tok = self.text_encoder.tokenize_and_push_to_device(y_str, to_device= not y_on_cpu)
+        self.text_encoder.njobs = 1
+
         if y_on_cpu: y_tok = y_tok.cpu()
         
         

@@ -3,9 +3,13 @@
 
 import argparse
 import sys
+import os
 from pathlib import Path
 import time
 import hydra
+import torch
+
+from my_genQC.utils.misc_utils import infer_torch_device
 
 # Add the src directory to path
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
@@ -19,30 +23,14 @@ from quantum_diffusion.utils import Logger, ExperimentLogger, setup_logging
 def main(cfg):
     cfg = cfg["training"]
 
-    parser = argparse.ArgumentParser(description="Train diffusion training on quantum circuits")
-
-    parser.add_argument(
-        "--device",
-        choices=["cpu", "cuda"],
-        help="Device to use for training"
-    )
-    parser.add_argument(
-        "--resume",
-        type=str,
-        help="Path to model checkpoint to resume training"
-    )
-
-    parser.add_argument(
-        "--verbose", "-v",
-        action="store_true",
-        help="Verbose output"
-    )
-    
-    args = parser.parse_args()
+    if cfg.general.device == "auto":
+        device = infer_torch_device()
+    else:
+        device = cfg.general.device
     
     # Setup logging
     setup_logging(
-        log_level="DEBUG" if args.verbose else "INFO",
+        log_level="DEBUG" if cfg.general.verbose else "INFO",
         console_output=True
     )
     logger = Logger(__name__)
@@ -54,15 +42,40 @@ def main(cfg):
     try:
         # Load dataset
         logger.info(f"Loading dataset from {cfg.general.dataset}")
-        dataset_loader = DatasetLoader(device=args.device, config=cfg)
-        dataset = dataset_loader.load_dataset(cfg.general.dataset)
+
+        dataset_loader = DatasetLoader(device=device, config=cfg)
+
+        if "dataset" in os.listdir(cfg.general.dataset):
+            logger.info("Detected preprocessed dataset. Loading directly...")
+            dataset = dataset_loader.load_dataset(cfg.general.dataset)
+
+        else:  # combine multiple datasets with different numbers of qubits
+            datasets = []
+            parent_dir = cfg.general.dataset
+            load_embedder = True
+            for dataset in os.listdir(parent_dir):
+                dataset = dataset_loader.load_dataset(os.path.join(parent_dir, dataset), load_embedder)
+                load_embedder = False  # only load embedder once
+
+                if device == torch.device("cuda"):
+                    dataset.dataset_to_gpu = True
+                datasets.append(dataset)
+            dataset = dataset_loader.combine_datasets(
+                                                    datasets,
+                                                    model_scale_factor=4,
+                                                    balance_maxes=[int(1e8)] * len(datasets),
+                                                    pad_constant=len(datasets[0].gate_pool) + 1,
+                                                    device=device,
+                                                    bucket_batch_size=-1,
+                                                    max_samples=[int(1e8)] * len(datasets),
+                                                    )
         
         # Create data loaders
         batch_size = cfg.training.batch_size or 32
-        dataloaders = dataset_loader.get_dataloaders(dataset, batch_size=batch_size)
+        dataloaders = dataset_loader.get_dataloaders(dataset, batch_size=batch_size, text_encoder_njobs=cfg.general.njobs)
         
         # Initialize trainer
-        trainer = DiffusionTrainer(config=cfg, device=args.device)
+        trainer = DiffusionTrainer(config=cfg, device=device)
 
         logger.info(f"Training configuration: {trainer.config}")
         
@@ -74,10 +87,10 @@ def main(cfg):
         exp_logger.log_step("setup", "Initializing model architecture")
         trainer.setup_model(dataset=dataset, text_encoder=dataset_loader.text_encoder)
         
-        # Load checkpoint if resuming, TODO: check implementation and test
-        if args.resume:
-            logger.info(f"Resuming training from {args.resume}")
-            trainer.load_model(args.resume)
+        # Load checkpoint if resuming TODO: check implementation and test, not correct!
+        if cfg.general.resume:
+            logger.info(f"Resuming training from {cfg.general.resume}")
+            trainer.load_model(cfg.general.resume)
         
         # Compile model
         logger.info("Compiling model for training...")
