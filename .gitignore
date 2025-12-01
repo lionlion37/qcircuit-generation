@@ -42,7 +42,6 @@ scripts/logs/
 *.pth
 *.ckpt
 *.safetensors
-data/
 scripts/datasets/
 scripts/evaluation_results/
 scripts/models/
