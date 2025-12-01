@@ -43,6 +43,10 @@ scripts/logs/
 *.ckpt
 *.safetensors
 data/
+scripts/datasets/
+scripts/evaluation_results/
+scripts/models/
+scripts/outputs/
 
 # Caches
 .mypy_cache/
