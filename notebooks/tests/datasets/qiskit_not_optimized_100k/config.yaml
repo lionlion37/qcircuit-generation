@@ -1,0 +1,20 @@
+target: my_genQC.dataset.circuits_dataset.CircuitsConfigDataset
+device: cpu
+comment: ''
+save_path: tests/datasets/qiskit_not_optimized_100k/dataset/ds
+save_datetime: 12/07/2025 22:00:09
+save_type: safetensors
+params:
+  store_dict:
+    x: tensor
+    'y': numpy
+  dataset_to_gpu: false
+  optimized: true
+  random_samples: 100000
+  num_of_qubits: 5
+  min_gates: 4
+  max_gates: 20
+  max_params: 0
+  gate_pool:
+  - h
+  - cx
