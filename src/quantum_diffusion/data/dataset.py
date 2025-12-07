@@ -91,6 +91,7 @@ class DatasetGenerator:
                         max_gates: int = 16,
                         backbone: str = "qiskit",
                         optimized: bool = True,
+                        n_jobs: int = 1,
                         condition_type: Union[str, List[str], CircuitConditionType, List[CircuitConditionType]] = "SRV",
                         output_path: str = "./datasets",
                         **kwargs) -> Dict[str, Dict[str, Union[str, int]]]:
@@ -150,10 +151,11 @@ class DatasetGenerator:
                     fixed_sub_gate_pool=gate_set,
                     optimized=optimized,
                     post_randomize_params=False,  # TODO: change when switching to parameterized circuits
+                    n_jobs=n_jobs,
                 )
 
                 dataset_params = {
-                    "optimized": True,
+                    "optimized": optimized,
                     "dataset_to_gpu": self.device == "cuda",
                     "random_samples": num_samples,
                     "num_of_qubits": num_qubits,

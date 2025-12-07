@@ -8,3 +8,4 @@ condition_type: SRV
 optimized: True
 output_path: ./datasets/srv_dataset
 device: auto
+n_jobs: 4

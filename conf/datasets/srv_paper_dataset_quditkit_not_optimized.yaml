@@ -42,6 +42,7 @@ condition_type: SRV
 backbone: quditkit
 optimized: false
 device: auto
+n_jobs: 4
 output_path: ./datasets/paper_quditkit/srv_${.variants.${.variant}.num_qubits}q_dataset
 
 hydra:
