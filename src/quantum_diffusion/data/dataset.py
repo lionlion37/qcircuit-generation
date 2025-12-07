@@ -13,12 +13,12 @@ import yaml
 from tqdm import tqdm
 
 # Assuming genQC imports (adjust paths as needed)
-from src.my_genQC.platform.circuits_generation import generate_circuit_dataset, CircuitConditionType
-from src.my_genQC.platform.simulation import Simulator, CircuitBackendType
-from src.my_genQC.platform.tokenizer.circuits_tokenizer import CircuitTokenizer
-from src.my_genQC.models.config_model import ConfigModel
-from src.my_genQC.dataset import circuits_dataset
-from src.my_genQC.utils.misc_utils import infer_torch_device
+from my_genQC.platform.circuits_generation import generate_circuit_dataset, CircuitConditionType
+from my_genQC.platform.simulation import Simulator, CircuitBackendType
+from my_genQC.platform.tokenizer.circuits_tokenizer import CircuitTokenizer
+from my_genQC.models.config_model import ConfigModel
+from my_genQC.dataset import circuits_dataset
+from my_genQC.utils.misc_utils import infer_torch_device
 
 from ..utils.config import ConfigManager
 from ..utils.logging import Logger
@@ -83,12 +83,14 @@ class DatasetGenerator:
         
         return normalized
     
-    def generate_dataset(self, 
+    def generate_dataset(self,
                         gate_set: List[str],
                         num_qubits: int,
                         num_samples: int,
                         min_gates: int = 2,
                         max_gates: int = 16,
+                        backbone: str = "qiskit",
+                        optimized: bool = True,
                         condition_type: Union[str, List[str], CircuitConditionType, List[CircuitConditionType]] = "SRV",
                         output_path: str = "./datasets",
                         **kwargs) -> Dict[str, Dict[str, Union[str, int]]]:
@@ -100,6 +102,8 @@ class DatasetGenerator:
             num_samples: Number of circuits to generate
             min_gates: Minimum number of gates per circuit
             max_gates: Maximum number of gates per circuit
+            backbone: Simulation backend ("qiskit", etc.)
+            optimized: Whether to optimize circuits
             condition_type: Conditioning specification ("SRV", "UNITARY", "BOTH", or a list)
             output_path: Path to save the dataset
             **kwargs: Additional parameters
@@ -112,9 +116,16 @@ class DatasetGenerator:
         vocabulary = {gate: idx for gate, idx in zip(gate_set, range(len(gate_set)))}
         output_root = Path(output_path)
         output_root.mkdir(parents=True, exist_ok=True)
+
+        if backbone == "qiskit":
+            backend_type = CircuitBackendType.QISKIT
+        elif backbone == "quditkit":
+            backend_type = CircuitBackendType.QUDITKIT
+        else:
+            raise ValueError(f"Unsupported backbone '{backbone}'")
         
         try:
-            simulator = Simulator(CircuitBackendType.QISKIT)
+            simulator = Simulator(backend=backend_type)
             tokenizer = CircuitTokenizer(vocabulary)
             target_conditions = self._normalize_condition_types(condition_type)
             multi_condition = len(target_conditions) > 1
@@ -136,7 +147,9 @@ class DatasetGenerator:
                     min_gates=min_gates,
                     max_gates=max_gates,
                     min_sub_gate_pool_cnt=2,
-                    fixed_sub_gate_pool=gate_set
+                    fixed_sub_gate_pool=gate_set,
+                    optimized=optimized,
+                    post_randomize_params=False,  # TODO: change when switching to parameterized circuits
                 )
 
                 dataset_params = {
@@ -209,7 +222,7 @@ class DatasetGenerator:
         results = []
         for i, config in enumerate(configs):
             self.logger.info(f"Generating dataset {i+1}/{len(configs)}")
-            result = self.generate_dataset(**config)
+            result = self.generate_dataset(backbone=Quantum, **config)
             results.append(result)
         return results
 

@@ -53,7 +53,7 @@ def set_backend(
     try:
         from . import gates
         gates.clear_cache()
-    except ImportError:
+    except AttributeError: # ImportError:  # TODO: check this change
         pass
 
 def show_backend_info() -> None:

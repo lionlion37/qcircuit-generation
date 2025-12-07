@@ -11,14 +11,14 @@ import yaml
 from tqdm import tqdm
 from omegaconf import  OmegaConf
 
-from src.my_genQC.pipeline.compilation_diffusion_pipeline import DiffusionPipeline_Compilation
-from src.my_genQC.pipeline.diffusion_pipeline import DiffusionPipeline
-from src.my_genQC.scheduler.scheduler_ddim import DDIMScheduler
-from src.my_genQC.models.unet_qc import QC_Compilation_UNet, QC_Cond_UNet
-from src.my_genQC.models.config_model import ConfigModel
-from src.my_genQC.models.unitary_encoder import Unitary_encoder_config
-from src.my_genQC.platform.tokenizer.circuits_tokenizer import CircuitTokenizer
-from src.my_genQC.utils.misc_utils import infer_torch_device
+from my_genQC.pipeline.compilation_diffusion_pipeline import DiffusionPipeline_Compilation
+from my_genQC.pipeline.diffusion_pipeline import DiffusionPipeline
+from my_genQC.scheduler.scheduler_ddim import DDIMScheduler
+from my_genQC.models.unet_qc import QC_Compilation_UNet, QC_Cond_UNet
+from my_genQC.models.config_model import ConfigModel
+from my_genQC.models.unitary_encoder import Unitary_encoder_config
+from my_genQC.platform.tokenizer.circuits_tokenizer import CircuitTokenizer
+from my_genQC.utils.misc_utils import infer_torch_device
 
 from ..utils.config import ConfigManager
 from ..utils.logging import Logger

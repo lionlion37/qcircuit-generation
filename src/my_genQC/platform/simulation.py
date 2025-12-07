@@ -13,7 +13,8 @@ from .backends.base_backend import BaseBackend
 class CircuitBackendType(enum.Enum): 
     QISKIT    = enum.auto()
     CUDAQ     = enum.auto() 
-    PENNYLANE = enum.auto() 
+    PENNYLANE = enum.auto()
+    QUDITKIT  = enum.auto()
 
 GenericBackendType = Union[CircuitBackendType]
 
@@ -40,6 +41,10 @@ class Simulator():
             case CircuitBackendType.PENNYLANE:
                 from genQC.platform.backends.circuits_pennylane import CircuitsPennylaneBackend    
                 backend = CircuitsPennylaneBackend(*args, **kwargs)
+
+            case CircuitBackendType.QUDITKIT:
+                from my_genQC.platform.backends.circuits_quditkit import CircuitsQuditkitBackend
+                backend = CircuitsQuditkitBackend(*args, **kwargs)
 
             case _:
                 raise NotImplementedError(f"Not implemented given backend: {backend}")

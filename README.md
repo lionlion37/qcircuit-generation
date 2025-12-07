@@ -1,33 +1,45 @@
 # QuantumDiffusion
 
-QuantumDiffusion generates quantum circuit datasets, trains diffusion models on those circuits, and evaluates the trained models with fidelity and circuit-level statistics. The repository vendors the genQC stack under `src/my_genQC`, so every script can run locally without extra services.
+Hydra-driven scripts for quantum circuit generation, diffusion-model training, and evaluation. The repository vendors the genQC stack in `src/my_genQC` (plus a stabilizer backend in `quditkit-main_schmidt`) so experiments can run locally without external services.
 
 ## Setup
-- Use Python 3.10+ inside a virtual environment.
-- Install dependencies with `pip install -r requirements.txt`; this provides PyTorch, Qiskit, Hydra, genQC, and supporting tooling.
-- Run every command from the repository root so the scripts can import `src/` and Hydra can locate `conf/`.
-- Hydra writes runs into `./outputs/<date>/<time>` by default. Pass `hydra.run.dir=.` `hydra.output_subdir=null` or use absolute paths in the configs when you want artifacts to land directly in the repo.
+- Python 3.10+ is recommended; use a virtual environment.
+- Install dependencies with `pip install -r requirements.txt` (PyTorch, Qiskit/Aer, Hydra, ruamel, genQC, etc.).
+- Run commands from the repo root so `src/` is on `sys.path` and Hydra finds `conf/`.
+- Hydra writes runs to `outputs/<date>/<time>`; add `hydra.run.dir=.` `hydra.output_subdir=null` to keep artifacts beside the repo.
 
-## Configuration system
-Hydra drives every entrypoint through `conf/config.yaml`:
+## Repository layout
+- `conf/` – Hydra defaults (`config.yaml`) plus presets under `datasets/`, `training/`, and `evaluation/`.
+- `scripts/` – entrypoints: `generate_dataset.py`, `train_model.py`, and `evaluate_model.py`.
+- `src/quantum_diffusion/` – wrappers for dataset gen/loading (`data/`), training (`training/`), evaluation (`evaluation/`), and logging utilities.
+- `src/my_genQC/` – vendored genQC models, pipelines, tokenizers, schedulers, and datasets.
+- `data/paper/` – pre-generated SRV datasets for 3–8 qubits matching the paper settings.
+- `quditkit-main_schmidt/` – qudit stabilizer simulator used in notebooks.
+- `notebooks/` – exploratory notebooks for dataset generation and training.
 
+## Configuration presets
+Hydra defaults live in `conf/config.yaml`:
 ```yaml
 defaults:
   - datasets: default
-  - training: default
   - evaluation: default
+  - training: default
 ```
+Pick presets with `datasets=<name>`, `training=<name>`, or `evaluation=<name>` and override any field inline (`training.training.num_epochs=5`).
 
-- `conf/datasets/` – parameters accepted by `DatasetGenerator` (gate sets, qubits, SRV/UNITARY/BOTH conditioning, sample counts, output paths, etc.).
-- `conf/training/` – `general`, `model`, `training`, `scheduler`, and `text_encoder` blocks used by `DiffusionTrainer` and the dataset loader.
-- `conf/evaluation/` – dataset/model locations plus guidance, sampling, and Hugging Face overrides for `evaluate_model.py`.
+- Dataset configs: `default`, `clifford_3q_unitary`, `clifford_4q_srv`, `srv_paper_dataset` (multi-run over 3–8 qubits).
+- Training configs: `default`, `quick_test_srv`, `quick_test_unitary`, `standard_unitary`, `large_model_unitary`.
+- Evaluation configs: `default`, `comprehensive`, `remote_model` (Hugging Face pull).
 
-Select a different preset with `datasets=clifford_3q_unitary`, `training=quick_test_srv`, `evaluation=comprehensive`, etc. Any field can be overridden inline, e.g. `training.training.num_epochs=5`. To add a reusable configuration, drop a new YAML file inside the corresponding folder and refer to it by name.
-
-## Workflow
-### 1. Generate circuits
-`scripts/generate_dataset.py` reads `cfg["datasets"]` and calls `DatasetGenerator`. Use Hydra overrides to pick a preset and tweak parameters:
-
+## Workflows
+### Generate datasets
+`scripts/generate_dataset.py` calls `quantum_diffusion.data.DatasetGenerator` to build genQC-compatible datasets. Example: run the paper SRV sweep across 3–8 qubits (multi-run via Hydra):
+```bash
+python scripts/generate_dataset.py \
+  hydra.run.dir=. hydra.output_subdir=null \
+  datasets=srv_paper_dataset
+```
+Single-condition example (unitary conditioning on 3 qubits):
 ```bash
 python scripts/generate_dataset.py \
   hydra.run.dir=. hydra.output_subdir=null \
@@ -36,41 +48,29 @@ python scripts/generate_dataset.py \
   datasets.output_path=./datasets/clifford_3q_unitary
 ```
 
-The generator emits one folder per requested condition (SRV, UNITARY, or BOTH), each containing `config.yaml` plus the serialized tensors under `dataset/ds/`.
-
-### 2. Train diffusion models
-`scripts/train_model.py` consumes `cfg["training"]`. The `general` block wires up the dataset path, output location, and experiment names, while `model`, `training`, `scheduler`, and `text_encoder` map directly onto the trainer. CLI flags `--device`, `--resume`, and `--verbose` are still available.
-
+### Train a diffusion model
+`scripts/train_model.py` uses `DatasetLoader` to read a genQC dataset folder, builds pipelines from `src/my_genQC`, and trains according to `cfg["training"]`:
 ```bash
 python scripts/train_model.py \
-  --device cuda \
   hydra.run.dir=. hydra.output_subdir=null \
   training=quick_test_srv \
-  training.general.dataset=./datasets/srv_dataset \
+  training.general.dataset=data/paper/srv_3q_dataset \
   training.general.output_path=./models/quick_test
 ```
+If `training.general.dataset` points to a directory containing multiple datasets, the loader will combine them with padding/balancing.
 
-Artifacts (model weights, embedder cache, metadata, logs) are written to `training.general.output_path`, and `ModelManager` registers the run using `general.model_name`.
-
-### 3. Evaluate models
-`scripts/evaluate_model.py` evaluates a saved pipeline (local or Hugging Face) against a dataset produced by step 1. Configure it through `cfg["evaluation"]`:
-
+### Evaluate a model or HF pipeline
+`scripts/evaluate_model.py` reuses genQC sampling/metrics on a stored dataset:
 ```bash
 python scripts/evaluate_model.py \
   hydra.run.dir=. hydra.output_subdir=null \
-  evaluation=comprehensive \
-  evaluation.dataset=./datasets/srv_dataset \
-  evaluation.model_dir=./models/quick_test/default_model_srv \
-  evaluation.num_samples=128 \
-  evaluation.model_params.sample_steps=50
+  evaluation=remote_model \
+  evaluation.dataset=data/paper/srv_3q_dataset \
+  evaluation.hf_repo=Floki00/qc_srv_3to8qubit \
+  evaluation.num_samples=300
 ```
+For local checkpoints, set `evaluation.model_dir=<path>` and clear `evaluation.hf_repo`.
 
-Set `evaluation.hf_repo=<org/model>` if you want to pull a remote pipeline; leave `evaluation.model_dir` empty in that case. The script reports fidelity metrics, gate statistics, and entanglement histograms while reusing genQC’s native tooling.
-
-## Repository layout
-- `conf/`: Hydra defaults plus dataset/training/evaluation presets.
-- `src/quantum_diffusion/`: dataset generation, training, evaluation, and utility modules that wrap genQC.
-- `src/my_genQC/`: vendored genQC stack used by every pipeline.
-- `scripts/`: entrypoints (`generate_dataset.py`, `train_model.py`, `evaluate_model.py`) and sample artifacts under `scripts/datasets`, `scripts/models`, `scripts/logs`, and `scripts/outputs`.
-- `notebooks/`: exploratory workflows and debugging references.
-- `tests/`: regression tests for the core package.
+## Notes
+- Default paths in configs (`./datasets/...`, `./models/...`) assume you copy or generate data into those locations; the paper SRV datasets under `data/` are the only bundled artifacts.
+- Pipelines rely on PyTorch and Qiskit; GPU is optional but recommended for training.

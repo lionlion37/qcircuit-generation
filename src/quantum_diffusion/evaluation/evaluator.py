@@ -19,12 +19,12 @@ from qiskit import QuantumCircuit
 from qiskit.quantum_info import Statevector, Operator, process_fidelity, state_fidelity
 
 # genQC imports
-from src.my_genQC.platform.simulation import Simulator, CircuitBackendType
-from src.my_genQC.platform.tokenizer.circuits_tokenizer import CircuitTokenizer
-from src.my_genQC.inference.sampling import generate_compilation_tensors, decode_tensors_to_backend
-from src.my_genQC.inference.evaluation_helper import get_unitaries
-from src.my_genQC.inference.eval_metrics import UnitaryFrobeniusNorm, UnitaryInfidelityNorm
-from src.my_genQC.utils.misc_utils import infer_torch_device
+from my_genQC.platform.simulation import Simulator, CircuitBackendType
+from my_genQC.platform.tokenizer.circuits_tokenizer import CircuitTokenizer
+from my_genQC.inference.sampling import generate_compilation_tensors, decode_tensors_to_backend
+from my_genQC.inference.evaluation_helper import get_unitaries
+from my_genQC.inference.eval_metrics import UnitaryFrobeniusNorm, UnitaryInfidelityNorm
+from my_genQC.utils.misc_utils import infer_torch_device
 
 from ..utils.logging import Logger
 from ..utils.config import ConfigManager

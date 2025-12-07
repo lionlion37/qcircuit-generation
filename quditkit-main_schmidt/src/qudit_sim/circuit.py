@@ -883,6 +883,50 @@ class QuantumCircuit:
             qc.append(instr, qudits)
         return qc
 
+    @classmethod
+    def from_qiskit(cls, qc: QiskitCircuit):
+        try:
+            from my_genQC.utils.config_loader import get_obj_from_str
+        except ImportError:
+            raise ImportError("This class method depends on my_genQC package. Please install it to use this feature.")
+
+        n = qc.num_qubits
+        d = 2  # Qiskit only supports qubits
+        name = None
+
+        qudit_circuit = cls(num_qudits=n, dim=d, name=name)
+
+        for instruction in qc.data:
+            gate_name = instruction.operation.name
+
+            dagger = False
+            if "†" in gate_name:
+                gate_name = gate_name.replace("†", "")
+                dagger = True
+
+            qudits_ids = tuple(qubit._index for qubit in instruction.qubits)
+
+            gate = get_obj_from_str(f"qudit_sim.predefined_gates.{gate_name}_gate")
+
+            qudit_circuit.append(gate, qudits_ids, dagger)
+
+        return qudit_circuit
+
+
+        # --- Noise Registry System ---
+        # The key is a unique model ID (int).
+        # The value is the normalized probability array.
+        self.noise_registry: dict[int, np.ndarray] = {}
+        # A cache to find existing models to avoid storing duplicate arrays.
+        # The key is a hashable tuple of the probability array.
+        self._noise_model_cache: dict[tuple, int] = {}
+        # A counter to generate new model IDs.
+        self._next_noise_model_id = 0
+
+        # --- Cache for Kraus Operators ---
+        self._kraus_operator_cache: dict[int, list[np.ndarray]] = {}
+
+
     def draw_qiskit(self, *args, path=None, **kwargs):
         """Draw using Qiskit (kwargs passed to QuantumCircuit.draw)
         Args:
