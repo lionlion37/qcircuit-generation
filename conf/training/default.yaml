@@ -31,6 +31,10 @@ training:
   enable_guidance_train: true
   guidance_train_p: 0.1
   cached_text_enc: true
+  wandb:
+    enable: true
+    project: qcircuit-generation
+    run_name: test_run
 
 text_encoder:
   type: CachedFrozenOpenCLIPEmbedder

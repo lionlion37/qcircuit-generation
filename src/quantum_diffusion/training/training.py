@@ -19,9 +19,25 @@ from my_genQC.models.config_model import ConfigModel
 from my_genQC.models.unitary_encoder import Unitary_encoder_config
 from my_genQC.platform.tokenizer.circuits_tokenizer import CircuitTokenizer
 from my_genQC.utils.misc_utils import infer_torch_device
+from my_genQC.pipeline.callbacks import Callback
 
 from ..utils.config import ConfigManager
 from ..utils.logging import Logger
+
+
+class WandbLoggingCallback(Callback):
+    """Log training progress to Weights & Biases."""
+    order = 100
+
+    def __init__(self, run):
+        self.run = run
+
+    def after_epoch(self, pipeline):
+        if not self.run or not hasattr(pipeline, "out_metric_dict"):
+            return
+        metrics = {k: float(v) for k, v in pipeline.out_metric_dict.items()}
+        metrics["epoch"] = pipeline.epoch + 1
+        self.run.log(metrics, step=pipeline.epoch + 1)
 
 
 class DiffusionTrainer:
@@ -42,6 +58,7 @@ class DiffusionTrainer:
         self.pipeline = None
         self.model = None
         self.scheduler = None
+        self.wandb_run = None
 
 
     def setup_model(self, dataset, text_encoder, tokenizer: Optional = None) -> None:
@@ -142,6 +159,23 @@ class DiffusionTrainer:
         except Exception as e:
             self.logger.error(f"Error compiling model: {e}")
             raise
+
+    def _setup_wandb(self):
+        training_config = self.config.get("training", {}) if self.config else {}
+        wandb_cfg = training_config.get("wandb", {})
+        enabled = wandb_cfg.get("enable", False) or wandb_cfg.get("enabled", False)
+        if not enabled:
+            return None
+        try:
+            import wandb
+        except ImportError:
+            self.logger.warning("wandb logging requested but the package is not installed.")
+            return None
+
+        general_cfg = self.config.get("general", {}) if self.config else {}
+        project = wandb_cfg.get("project", "qcircuit-generation")
+        run_name = wandb_cfg.get("run_name", general_cfg.get("experiment_name"))
+        return wandb.init(project=project, name=run_name, config=self.config)
     
     def train(self, dataloaders, save_path: Optional[str] = None) -> Dict:
         """Train the diffusion model.
@@ -159,6 +193,12 @@ class DiffusionTrainer:
             
             self.logger.info(f"Starting training for {num_epochs} epochs...")
             
+            self.wandb_run = self._setup_wandb()
+            if self.wandb_run:
+                cbs = list(self.pipeline.cbs) if getattr(self.pipeline, "cbs", None) else []
+                cbs.append(WandbLoggingCallback(self.wandb_run))
+                self.pipeline.cbs = cbs
+
             # Train the model
             history = self.pipeline.fit(
                 num_epochs=num_epochs,
@@ -175,6 +215,9 @@ class DiffusionTrainer:
         except Exception as e:
             self.logger.error(f"Error during training: {e}")
             raise
+        finally:
+            if self.wandb_run:
+                self.wandb_run.finish()
     
     def save_model(self, save_path: str) -> None:
         """Save the trained model and configuration.

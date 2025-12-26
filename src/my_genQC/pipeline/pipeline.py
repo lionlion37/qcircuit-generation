@@ -184,13 +184,16 @@ class Pipeline(PipelineIO):
                 # run_cbs(self.cbs, "after_batch", self) # e.g. if max-number of batches is needed
                 
     #run on train and one on valid
-    def fit(self, num_epochs: int, data_loaders: DataLoaders, lr: float=None, lr_sched=None, log_summary=True):
+    def fit(self, num_epochs: int, data_loaders: DataLoaders, lr: float=None, lr_sched=None, log_summary=True, ckpt_interval=None, ckpt_path=None):
         if not hasattr(self, "loss_fn"): raise RuntimeError("'compile' has to be called first")       
        
         self._set_opt_param(lr=lr)  
         if not hasattr(self, "lr_sched"):
             if lr_sched: self.lr_sched = lr_sched(self.optimizer)
             else: self.lr_sched = None
+
+        if exists(ckpt_interval) and exists(ckpt_path):
+            self.cbs = [*(self.cbs or []), CheckpointCB(ckpt_interval, ckpt_path)]
 
         self.epoch      = 0
         self.num_epochs = num_epochs
