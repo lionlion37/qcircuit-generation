@@ -9,14 +9,14 @@ import time
 import hydra
 import torch
 
-from my_genQC.utils.misc_utils import infer_torch_device
-
 # Add the src directory to path
-sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
+sys.path.insert(0, str(Path(__file__).parent.parent /"src"))
 
 from quantum_diffusion.data import DatasetLoader
 from quantum_diffusion.training import DiffusionTrainer, ModelManager
 from quantum_diffusion.utils import Logger, ExperimentLogger, setup_logging
+
+from my_genQC.utils.misc_utils import infer_torch_device
 
 
 @hydra.main(config_path="../conf", config_name="config", version_base=None)
@@ -55,6 +55,12 @@ def main(cfg):
             load_embedder = True
             for dataset in os.listdir(parent_dir):
                 dataset = dataset_loader.load_dataset(os.path.join(parent_dir, dataset), load_embedder)
+
+                ### TODO: ONLY FOR DEBUG, REMOVE; take only the first 1000 samples per dataset to test training
+                dataset.x = dataset.x[:1000]
+                dataset.y = dataset.y[:1000]
+                ### ONLY FOR DEBUG, REMOVE
+
                 load_embedder = False  # only load embedder once
 
                 if device == torch.device("cuda"):

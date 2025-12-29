@@ -1,9 +1,16 @@
-dataset: ./datasets/paper/srv_3q_dataset # srv_dataset
+dataset: ./datasets/paper_quditkit/srv_8q_dataset # srv_dataset
 model_dir: null
 hf_repo: Floki00/qc_srv_3to8qubit
-num_samples: 3000
+num_samples: 999999
+save_output: true
+save_folder: ./scripts/inference/
 
 model_params:
   guidance_scale: 10.0
   sample_steps: 20
-  auto_batch_size: 512
+  auto_batch_size: 4086
+
+wandb:
+  enable: true
+  project: qcircuit-generation
+  run_name: 8q_remote_model_evaluation

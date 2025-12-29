@@ -7,6 +7,7 @@ import argparse
 import sys
 import os
 import time
+import datetime
 import ast
 from collections import Counter
 from pathlib import Path
@@ -18,16 +19,32 @@ import torch
 # Ensure local src/ is importable
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
-from src.my_genQC.inference.eval_metrics import UnitaryFrobeniusNorm, UnitaryInfidelityNorm
-from src.my_genQC.inference.evaluation_helper import get_unitaries, get_srvs
-from src.my_genQC.inference.sampling import generate_compilation_tensors, generate_tensors, decode_tensors_to_backend
-from src.my_genQC.pipeline.diffusion_pipeline import DiffusionPipeline
-from src.my_genQC.platform.simulation import Simulator, CircuitBackendType
-from src.my_genQC.platform.tokenizer.circuits_tokenizer import CircuitTokenizer
-from src.my_genQC.utils.misc_utils import infer_torch_device, get_entanglement_bins
-from src.my_genQC.dataset import circuits_dataset
-from src.my_genQC.models.config_model import ConfigModel
-from src.my_genQC.utils.config_loader import load_config
+from my_genQC.inference.eval_metrics import UnitaryFrobeniusNorm, UnitaryInfidelityNorm
+from my_genQC.inference.evaluation_helper import get_unitaries, get_srvs
+from my_genQC.inference.sampling import generate_compilation_tensors, generate_tensors, decode_tensors_to_backend
+from my_genQC.pipeline.diffusion_pipeline import DiffusionPipeline
+from my_genQC.platform.simulation import Simulator, CircuitBackendType
+from my_genQC.platform.tokenizer.circuits_tokenizer import CircuitTokenizer
+from my_genQC.utils.misc_utils import infer_torch_device, get_entanglement_bins
+from my_genQC.dataset import circuits_dataset
+from my_genQC.models.config_model import ConfigModel
+from my_genQC.utils.config_loader import load_config, store_tensor
+
+
+def setup_wandb(config):
+    wandb_cfg = config.get("wandb", {})
+    enabled = wandb_cfg.get("enable", False) or wandb_cfg.get("enabled", False)
+    if not enabled:
+        return None
+    try:
+        import wandb
+    except ImportError:
+        print("wandb logging requested but the package is not installed.")
+        return None
+
+    project = wandb_cfg.get("project", "qcircuit-generation")
+    run_name = wandb_cfg.get("run_name", wandb_cfg.get("experiment_name"))
+    return wandb.init(project=project, name=run_name, config=dict(config))
 
 
 def load_dataset(dataset_path: Path, device: torch.device):
@@ -125,10 +142,10 @@ def to_complex(unitary_tensor: torch.Tensor) -> torch.Tensor:
 @hydra.main(config_path="../conf", config_name="config.yaml", version_base=None)
 def main(cfg):
     cfg = cfg["evaluation"]
-
-    # parser = argparse.ArgumentParser(description="Evaluate a genQC diffusion pipeline using native helpers.")
-    # parser.add_argument("--device", choices=["cpu", "cuda"], help="Device to run evaluation on.")
-    # args = parser.parse_args()
+    print("Setting up WanDB")
+    wandb_run = setup_wandb(cfg)
+    if wandb_run:
+        print("Successful")
 
     device = torch.device(infer_torch_device())
     dataset = load_dataset(Path(cfg.dataset), device=device)
@@ -151,6 +168,19 @@ def main(cfg):
     num_qubits = getattr(dataset.params_config, "num_of_qubits", system_size)
 
     is_compilation = hasattr(dataset, "U") and dataset.store_dict.get("U") == "tensor"
+
+    # ---- W&B: static metadata (log once) ----
+    if wandb_run:
+        wandb_run.config.update({
+            "eval/samples": samples,
+            "data/system_size": system_size,
+            "data/max_gates": max_gates,
+            "data/num_qubits": num_qubits,
+            "task/is_compilation": is_compilation,
+            "pipeline/guidance_sample_mode": pipeline.guidance_sample_mode,
+            "pipeline/sample_steps": cfg.model_params.sample_steps,
+            "device": str(device),
+        }, allow_val_change=True)
 
     print("Starting tensor generation...")
 
@@ -187,6 +217,18 @@ def main(cfg):
             no_bar=False,  # shows diffusion steps
         )
 
+        # Save output for further inspection after run
+        if cfg.save_output:
+            if cfg.save_folder:
+                timestamp = datetime.datetime.now().strftime("%D-%T")
+                try:
+                    save_path = os.path.join(cfg.save_folder, f"{num_qubits}q_{samples}_samples.pt")#_{timestamp}.pt")
+                    store_tensor(tensors_out, save_path)
+                except:
+                    pass
+            else:
+                raise Warning("No save folder specified in config, however save_output is True. Skipping saving.")
+
     print("Finished tensor generation.")
 
     if isinstance(tensors_out, tuple):
@@ -220,6 +262,10 @@ def main(cfg):
     print(f"Decoded circuits : {len(backend_circuits)}")
     print(f"Decode failures  : {err_cnt}")
 
+    if wandb_run:
+        wandb_run.summary["eval/decoded_circuits"] = len(backend_circuits)
+        wandb_run.summary["eval/decode_failures"] = err_cnt
+
     if is_compilation:
         idx_tensor = torch.as_tensor(
             valid_indices,
@@ -240,7 +286,7 @@ def main(cfg):
         print("No target unitaries in dataset; running SRV evaluation.")
         target_srvs = parse_srv_targets(dataset.y[:samples])[valid_indices]
         predicted_srvs = torch.tensor(
-            get_srvs(simulator, backend_circuits, n_jobs=1),
+            get_srvs(simulator, backend_circuits, n_jobs=16),  # TODO: rewrite to use quditkit
             dtype=torch.long,
         )
 
@@ -250,8 +296,12 @@ def main(cfg):
         exact_match = (predicted_srvs == target_srvs).all(dim=1)
         per_qubit = (predicted_srvs == target_srvs).float().mean(dim=0)
 
-        print(f"SRV exact-match rate : {exact_match.float().mean().item():.4f}")
-        print("Per-qubit rank acc   : " + ", ".join(f"q{i}={acc:.3f}" for i, acc in enumerate(per_qubit.tolist())))
+        srv_exact_match_rate = exact_match.float().mean().item()
+        print(f"SRV exact-match rate : {srv_exact_match_rate:.4f}")
+
+        qubit_rank_acc = {i: acc for i, acc in enumerate(per_qubit.tolist())}
+        print("Per-qubit rank acc   : " + ", ".join(f"q{i}={acc:.3f}" for i, acc in qubit_rank_acc.items()))
+        # print("Per-qubit rank acc   : " + ", ".join(f"q{i}={acc:.3f}" for i, acc in enumerate(per_qubit.tolist())))
 
         pred_hist, ent_labels, pred_other = entanglement_histogram(predicted_srvs, num_qubits)
         targ_hist, _, targ_other = entanglement_histogram(target_srvs, num_qubits)
@@ -262,6 +312,11 @@ def main(cfg):
                 print(f"  {label:>20}: {t_frac:6.2%} | {p_frac:6.2%}")
             if targ_other > 0 or pred_other > 0:
                 print(f"  {'Other/invalid':>20}: {targ_other:6.2%} | {pred_other:6.2%}")
+
+        if wandb_run:
+            wandb_run.summary["eval/srv_exact_match_rate"] = srv_exact_match_rate
+            for i, acc in qubit_rank_acc.items():
+                wandb_run.summary[f"eval/qubit_rank_acc/{i}q"] = acc
 
     print("==========================")
 

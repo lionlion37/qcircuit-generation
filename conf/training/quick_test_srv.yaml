@@ -1,3 +1,13 @@
+general:
+  output_path: ./models/trained/
+  model_name: test_model_srv  # TODO: this is also present below under training
+  experiment_name: quick_test_srv_experiment  # TODO: this is also present below under training
+  dataset: ./datasets/paper_quditkit # ./datasets/clifford_3q_srv_small
+  njobs: 16
+  device: auto
+  resume: false
+  verbose: true
+
 model:
   type: QC_Cond_UNet
   save_type: pt
@@ -17,13 +27,19 @@ training:
   optimizer: Adam
   loss: MSELoss
   num_epochs: 5
-  batch_size: 32
+  batch_size: 512
   enable_guidance_train: true
   guidance_train_p: 0.1
   cached_text_enc: true
   output_path: ./models/trained/
-  model_name: default_model
+  model_name: test_model
   experiment_name: quick_test_srv_experiment
+  ckpt_path: ./cp_saves/
+  ckpt_interval: 1
+  wandb:
+    enable: true
+    project: qcircuit-generation
+    run_name: test_run
 
 text_encoder:
   type: CachedFrozenOpenCLIPEmbedder

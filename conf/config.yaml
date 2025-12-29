@@ -3,8 +3,8 @@ defaults:
   - evaluation: default
   - training: default
 
-hydra:
-  mode: MULTIRUN
-  sweeper:
-    params:
-      datasets.variant: q3,q4,q5,q6,q7,q8
+# hydra:
+#   mode: MULTIRUN
+#   sweeper:
+#     params:
+#       datasets.variant: q3,q4,q5,q6,q7,q8

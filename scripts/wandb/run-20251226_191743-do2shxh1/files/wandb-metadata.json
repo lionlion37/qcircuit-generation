@@ -1,0 +1,44 @@
+{
+  "os":  "Linux-6.5.0-45-generic-x86_64-with-glibc2.39",
+  "python":  "CPython 3.12.3",
+  "startedAt":  "2025-12-26T19:17:43.832635Z",
+  "args":  [
+    "training=quick_test_srv",
+    "training.general.dataset=../datasets/paper_quditkit"
+  ],
+  "program":  "/workspace/qcircuit-generation/scripts/train_model.py",
+  "codePath":  "scripts/train_model.py",
+  "codePathLocal":  "train_model.py",
+  "git":  {
+    "remote":  "https://github.com/lionlion37/qcircuit-generation.git",
+    "commit":  "b198ac1c19035c9e4086ac7d40159403e692d102"
+  },
+  "email":  "lidungl@archimedia.at",
+  "root":  "/workspace/qcircuit-generation/scripts",
+  "host":  "cdbbc2c75ef6",
+  "executable":  "/usr/local/bin/python",
+  "cpu_count":  24,
+  "cpu_count_logical":  48,
+  "gpu":  "NVIDIA RTX A4500",
+  "gpu_count":  1,
+  "disk":  {
+    "/":  {
+      "total":  "32212254720",
+      "used":  "9376100352"
+    }
+  },
+  "memory":  {
+    "total":  "270097338368"
+  },
+  "gpu_nvidia":  [
+    {
+      "name":  "NVIDIA RTX A4500",
+      "memoryTotal":  "21464350720",
+      "cudaCores":  7168,
+      "architecture":  "Ampere",
+      "uuid":  "GPU-8d000595-96f1-1f83-3f4f-d0d781ca1a66"
+    }
+  ],
+  "cudaVersion":  "12.4",
+  "writerId":  "6fk6rbbbaiziuoefwkpghqodci7fx118"
+}
