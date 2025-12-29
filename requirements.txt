@@ -13,6 +13,7 @@ safetensors
 tensordict
 huggingface_hub
 genqc
+wandb
 ruamel.yaml
 hydra-core>=1.3.0
 
