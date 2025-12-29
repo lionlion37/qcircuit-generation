@@ -238,7 +238,7 @@ def main(cfg):
 
     vocabulary = {gate: idx for idx, gate in enumerate(dataset.gate_pool)}
     tokenizer = CircuitTokenizer(vocabulary)
-    simulator = Simulator(CircuitBackendType.QISKIT)
+    simulator = Simulator(CircuitBackendType.QUDITKIT)
 
     decoded_circuits, _ = decode_tensors_to_backend(
         simulator=simulator,
