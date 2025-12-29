@@ -11,6 +11,7 @@ build/
 dist/
 *.egg-info/
 pip-wheel-metadata/
+._quditkit-main_schmidt
 
 # Virtual environments
 .venv/
@@ -33,6 +34,7 @@ coverage.xml
 .coverage*
 htmlcov/
 scripts/logs/
+multirun/
 
 # Notebook artifacts
 .ipynb_checkpoints/
@@ -42,8 +44,7 @@ scripts/logs/
 *.pth
 *.ckpt
 *.safetensors
-scripts/datasets/
-scripts/evaluation_results/
+datasets/
 scripts/models/
 scripts/outputs/
 
