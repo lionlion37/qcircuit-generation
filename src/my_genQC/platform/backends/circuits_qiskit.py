@@ -24,6 +24,8 @@ def get_number_of_gate_params(gate_cls: type[Gate]) -> int:
     return gate_cls.__init__.__code__.co_argcount - len(gate_cls.__init__.__defaults__) - 1
 
 # %% ../../../src/platform/backends/circuits_qiskit.ipynb 6
+import functools
+@functools.lru_cache(None)
 def instruction_name_to_qiskit_gate(name: str) -> Gate:
     match name:
         case "swap": name = "Swap"

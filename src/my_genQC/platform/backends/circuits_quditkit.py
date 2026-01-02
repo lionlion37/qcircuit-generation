@@ -23,7 +23,8 @@ from qiskit import transpile
 #     # python: gives you the number of any arguments BEFORE *args, minus the ones that have a default, -1 for self parameter of classes
 #    return gate_cls.__init__.__code__.co_argcount - len(gate_cls.__init__.__defaults__) - 1
 
-
+import functools
+@functools.lru_cache(None)
 def instruction_name_to_quditsim_gate(name: str) -> Gate:
     match name:
         case "cp":
