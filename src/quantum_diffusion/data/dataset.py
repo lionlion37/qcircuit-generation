@@ -278,7 +278,6 @@ class DatasetLoader:
                 self.vocabulary = {gate: idx for gate, idx in zip(dataset.gate_pool, range(len(dataset.gate_pool)))}
                 self.tokenizer = CircuitTokenizer(self.vocabulary)
 
-                # Setup text encoder
                 time_stamp = time.strftime('%m/%d/%y %H:%M:%S', time.localtime())
                 text_encoder_config = copy.deepcopy(dict(self.config["text_encoder"]))
                 text_encoder_config["save_datetime"] = time_stamp
