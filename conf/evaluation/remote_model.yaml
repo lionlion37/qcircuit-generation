@@ -2,13 +2,13 @@ dataset: ./datasets/paper_quditkit/srv_8q_dataset # srv_dataset
 model_dir: null
 hf_repo: Floki00/qc_srv_3to8qubit
 num_samples: 999999
-save_output: true
+save_output: false # true
 save_folder: ./scripts/inference/
 
 model_params:
   guidance_scale: 10.0
   sample_steps: 20
-  auto_batch_size: 4086
+  auto_batch_size: 1024 # 4086
 
 wandb:
   enable: true

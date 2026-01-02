@@ -1,4 +1,4 @@
-dataset: ./datasets/srv_dataset  # clifford_3q_srv
+dataset: ./datasets/paper_quditkit/srv_3q_dataset
 model_dir: ./models/trained/default_model_srv
 hf_repo: null
 num_samples: 64
