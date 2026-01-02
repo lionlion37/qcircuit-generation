@@ -15,7 +15,6 @@ __author__ = "Quantum Diffusion Team"
 # Core functionality imports
 from .data import DatasetGenerator, DatasetLoader, PRESET_CONFIGS
 from .training import DiffusionTrainer, ModelManager
-from .evaluation import Evaluator, MetricsCalculator
 from .utils import ConfigManager, Logger, setup_logging
 
 # Make key classes easily accessible
@@ -29,11 +28,8 @@ __all__ = [
     'DiffusionTrainer',
     'ModelManager',
     'PRESET_TRAINING_CONFIGS',
-    
-    # Evaluation
-    'Evaluator',
-    'MetricsCalculator',
-    
+    'PRESET_TRAINING_CONFIGS',
+
     # Utils
     'ConfigManager',
     'Logger',
