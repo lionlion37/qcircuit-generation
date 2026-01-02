@@ -1,0 +1,39 @@
+{
+  "os":  "Linux-6.8.0-45-generic-x86_64-with-glibc2.35",
+  "python":  "CPython 3.11.10",
+  "startedAt":  "2026-01-02T22:00:14.008733Z",
+  "program":  "qcircuit-generation/notebooks/remote_model_evaluation_results.ipynb",
+  "codePath":  "qcircuit-generation/notebooks/remote_model_evaluation_results.ipynb",
+  "git":  {
+    "remote":  "https://github.com/lionlion37/qcircuit-generation.git",
+    "commit":  "57837c22d3ef26ec26e580bf38619299fa66ce4a"
+  },
+  "email":  "lidungl@archimedia.at",
+  "root":  "/workspace/qcircuit-generation/notebooks",
+  "host":  "82dc69fc519a",
+  "executable":  "/usr/bin/python3.11",
+  "cpu_count":  24,
+  "cpu_count_logical":  48,
+  "gpu":  "NVIDIA RTX A4500",
+  "gpu_count":  1,
+  "disk":  {
+    "/":  {
+      "total":  "21474836480",
+      "used":  "5690351616"
+    }
+  },
+  "memory":  {
+    "total":  "236277444608"
+  },
+  "gpu_nvidia":  [
+    {
+      "name":  "NVIDIA RTX A4500",
+      "memoryTotal":  "21464350720",
+      "cudaCores":  7168,
+      "architecture":  "Ampere",
+      "uuid":  "GPU-03cdb021-b8ef-6522-ce5d-b76b07beb786"
+    }
+  ],
+  "cudaVersion":  "12.4",
+  "writerId":  "2bk2qz4dbc9ego6rx8n9vg905tzjp1cg"
+}

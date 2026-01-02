@@ -1,0 +1,93 @@
+_wandb:
+    value:
+        cli_version: 0.23.1
+        e:
+            3acmorhhcwi52dyfd52nzhzt1ddf6lcc:
+                codePath: qcircuit-generation/notebooks/remote_model_evaluation_results.ipynb
+                cpu_count: 24
+                cpu_count_logical: 48
+                cudaVersion: "12.4"
+                disk:
+                    /:
+                        total: "21474836480"
+                        used: "6365155328"
+                email: lidungl@archimedia.at
+                executable: /usr/bin/python3.11
+                git:
+                    commit: 57837c22d3ef26ec26e580bf38619299fa66ce4a
+                    remote: https://github.com/lionlion37/qcircuit-generation.git
+                gpu: NVIDIA RTX A4500
+                gpu_count: 1
+                gpu_nvidia:
+                    - architecture: Ampere
+                      cudaCores: 7168
+                      memoryTotal: "21464350720"
+                      name: NVIDIA RTX A4500
+                      uuid: GPU-03cdb021-b8ef-6522-ce5d-b76b07beb786
+                host: 82dc69fc519a
+                memory:
+                    total: "236277444608"
+                os: Linux-6.8.0-45-generic-x86_64-with-glibc2.35
+                program: qcircuit-generation/notebooks/remote_model_evaluation_results.ipynb
+                python: CPython 3.11.10
+                root: /workspace/qcircuit-generation/notebooks
+                startedAt: "2026-01-02T22:46:24.003661Z"
+                writerId: 3acmorhhcwi52dyfd52nzhzt1ddf6lcc
+        m: []
+        python_version: 3.11.10
+        t:
+            "1":
+                - 1
+                - 49
+                - 50
+                - 53
+                - 105
+            "2":
+                - 1
+                - 41
+                - 49
+                - 50
+                - 53
+                - 63
+                - 105
+            "3":
+                - 2
+                - 13
+                - 16
+                - 62
+            "4": 3.11.10
+            "5": 0.23.1
+            "8":
+                - 1
+            "12": 0.23.1
+            "13": linux-x86_64
+data/max_gates:
+    value: 16
+data/num_qubits:
+    value: 3
+data/system_size:
+    value: 3
+dataset:
+    value: ../datasets/paper_quditkit/srv_3q_dataset
+device:
+    value: cuda
+eval/samples:
+    value: 163327
+hf_repo:
+    value: Floki00/qc_srv_3to8qubit
+model_dir:
+    value: null
+model_params:
+    value: '{''guidance_scale'': 10.0, ''sample_steps'': 20, ''auto_batch_size'': 1024}'
+num_samples:
+    value: 999999
+pipeline/guidance_sample_mode:
+    value: rescaled
+pipeline/sample_steps:
+    value: 20
+save_folder:
+    value: ./scripts/inference/
+save_output:
+    value: false
+wandb:
+    value: '{''enable'': True, ''project'': ''qcircuit-generation'', ''run_name'': ''3q_remote_model_evaluation''}'
