@@ -5,6 +5,8 @@
 # %% auto 0
 __all__ = ['CircuitTokenizer']
 
+import torch
+
 # %% ../../../src/platform/tokenizer/circuits_tokenizer.ipynb 2
 from ...imports import *
 from .base_tokenizer import BaseTokenizer, Vocabulary
@@ -89,10 +91,44 @@ class CircuitTokenizer(BaseTokenizer):
         num_of_qubits, time = tensor.shape
         
         instructions = CircuitInstructions(tensor_shape=tensor.shape)
-        
+
+        valid_gate_ids = set(self.vocabulary_inverse.keys())
+
         for t in range(time):         
             enc_time_slice = tensor[:, t] # contains all bits at time t   
 
+            ## NEW IMPLEMENTATION
+            nonzero_idx = torch.nonzero(enc_time_slice, as_tuple=False).flatten()  # indices where gates got placed, per definition index 0 = background token, so no gate
+            if nonzero_idx.numel() == 0:  # no gate was placed this timestep
+                if place_error_placeholders:
+                    instructions.add_instruction("h", [], [], [])
+                continue
+
+            vals = enc_time_slice[nonzero_idx]
+            gate_index = int(abs(vals[0].item()))
+            if gate_index not in valid_gate_ids:
+                if place_error_placeholders:
+                    instructions.add_instruction("h", [], [], [])
+                continue
+
+            gate = self.vocabulary_inverse[gate_index]
+
+            control_nodes = nonzero_idx[vals == (self.sign_labels["control_nodes"] * gate_index)].tolist()
+            target_nodes = nonzero_idx[vals == (self.sign_labels["target_nodes"] * gate_index)].tolist()
+
+            if control_nodes and not target_nodes and not ignore_errors:
+                raise RuntimeError("target_nodes.nelement() <= 0 but control_nodes.nelement() > 0")
+
+            params = []
+            if exists(params_tensor):
+                params = params_tensor[:, t]
+                if params_4pi_normalization:
+                    params = (params + 1.0) * 2.0 * np.pi  # [-1, 1] to [0, 4pi]
+                params = params.tolist()
+
+            instructions.add_instruction(gate, control_nodes, target_nodes, params=params)
+
+            """
             _gate_placed = False
             
             for gate_index, gate in self.vocabulary_inverse.items():   
@@ -124,6 +160,7 @@ class CircuitTokenizer(BaseTokenizer):
                 instructions.add_instruction("h", [], [], [])
         
             #else # we are fine with tensors that have time steps with no action!
+            """
         
         return instructions
 
