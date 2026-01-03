@@ -44,37 +44,7 @@ def main(cfg):
         logger.info(f"Loading dataset from {cfg.general.dataset}")
 
         dataset_loader = DatasetLoader(device=device, config=cfg)
-
-        if "dataset" in os.listdir(cfg.general.dataset):
-            logger.info("Detected preprocessed dataset. Loading directly...")
-            dataset = dataset_loader.load_dataset(cfg.general.dataset)
-
-        else:  # combine multiple datasets with different numbers of qubits
-            datasets = []
-            parent_dir = cfg.general.dataset
-            load_embedder = True
-            for dataset in os.listdir(parent_dir):
-                dataset = dataset_loader.load_dataset(os.path.join(parent_dir, dataset), load_embedder)
-
-                ### TODO: ONLY FOR DEBUG, REMOVE; take only the first 1000 samples per dataset to test training
-                dataset.x = dataset.x[:1000]
-                dataset.y = dataset.y[:1000]
-                ### ONLY FOR DEBUG, REMOVE
-
-                load_embedder = False  # only load embedder once
-
-                if device == torch.device("cuda"):
-                    dataset.dataset_to_gpu = True
-                datasets.append(dataset)
-            dataset = dataset_loader.combine_datasets(
-                                                    datasets,
-                                                    model_scale_factor=4,
-                                                    balance_maxes=[int(1e8)] * len(datasets),
-                                                    pad_constant=len(datasets[0].gate_pool) + 1,
-                                                    device=device,
-                                                    bucket_batch_size=-1,
-                                                    max_samples=[int(1e8)] * len(datasets),
-                                                    )
+        dataset = dataset_loader.load_dataset(cfg.general.dataset)
         
         # Create data loaders
         batch_size = cfg.training.batch_size or 32

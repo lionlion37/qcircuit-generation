@@ -20,8 +20,9 @@ from my_genQC.models.config_model import ConfigModel
 from my_genQC.dataset import circuits_dataset
 from my_genQC.utils.misc_utils import infer_torch_device
 
-from ..utils.config import ConfigManager
-from ..utils.logging import Logger
+from quantum_diffusion.utils.config import ConfigManager
+from quantum_diffusion.utils.logging import Logger
+from quantum_diffusion.utils.model_helper import remap_cloob_key
 
 
 class DatasetGenerator:
@@ -242,23 +243,65 @@ class DatasetLoader:
         self.device = device or infer_torch_device() if 'infer_torch_device' in globals() else 'cpu'
         self.logger = Logger(__name__)
         self.config = dict(config)
-    
-    def load_dataset(self, dataset_path: str, load_embedder: bool=True, **kwargs):
+
+
+    def _load_embedder(self, dataset):
+        self.vocabulary = {gate: idx for gate, idx in zip(dataset.gate_pool, range(len(dataset.gate_pool)))}
+        self.tokenizer = CircuitTokenizer(self.vocabulary)
+
+        time_stamp = time.strftime('%m/%d/%y %H:%M:%S', time.localtime())
+        text_encoder_config = copy.deepcopy(dict(self.config["text_encoder"]))
+        text_encoder_config["save_datetime"] = time_stamp
+
+        target = text_encoder_config.get("target")
+        if not target:
+            module_path = text_encoder_config.pop("module", "my_genQC.models.frozen_open_clip")
+            encoder_type = text_encoder_config.get("type")
+            if not encoder_type:
+                raise ValueError("Text encoder config requires 'type' or explicit 'target'.")
+            target = f"{module_path}.{encoder_type}"
+
+        text_encoder_config["target"] = target
+
+        text_encoder = ConfigModel.from_config(text_encoder_config, self.device)
+
+        # load local weights, e.g. from CLOOB
+        if self.config["text_encoder"]["params"]["local_weights_path"]:
+            self.logger.info("Loading local text embedder weights...")
+            self.logger.warning("Only CLOOB weights are loadable!")
+
+            cloob_checkpoint = torch.load(self.config["text_encoder"]["params"]["local_weights_path"], weights_only=True)
+
+            sd = cloob_checkpoint["state_dict"]
+
+            # adapt CLOOB state_dict to genQC CLIP
+            sd = {k.replace("module.", "", 1): v for k, v in sd.items()}
+            sd = {remap_cloob_key(k): v for k, v in sd.items()}
+
+            # Load non-strict to ignore visual weights
+            incomp = text_encoder.model.load_state_dict(sd, strict=False)
+            self.logger.warning(f"{len(incomp.missing_keys)} missing keys, first 10: {incomp.missing_keys[:10]}")
+            self.logger.warning(f"{len(incomp.unexpected_keys)} unexpected keys, first 10: {incomp.unexpected_keys[:10]}")
+
+        return text_encoder
+
+
+    def _load_single_dataset(self, dataset_path: str, load_embedder: bool = True, **kwargs):
         """Load a saved quantum circuit dataset.
-        
+
         Args:
             dataset_path: Path to the saved dataset
             **kwargs: Additional loading parameters
-            
+
         Returns:
             Loaded dataset object
         """
         try:
             config_path = os.path.join(dataset_path, "config.yaml")
-            
+
             if not os.path.exists(config_path):
                 raise FileNotFoundError(f"Config file not found at {config_path}")
-            
+
             with open(config_path, 'r') as cfg_file:
                 cfg_data = yaml.safe_load(cfg_file)
             target = cfg_data.get("target", "")
@@ -275,31 +318,47 @@ class DatasetLoader:
             )
 
             if load_embedder:
-                self.vocabulary = {gate: idx for gate, idx in zip(dataset.gate_pool, range(len(dataset.gate_pool)))}
-                self.tokenizer = CircuitTokenizer(self.vocabulary)
-
-                time_stamp = time.strftime('%m/%d/%y %H:%M:%S', time.localtime())
-                text_encoder_config = copy.deepcopy(dict(self.config["text_encoder"]))
-                text_encoder_config["save_datetime"] = time_stamp
-
-                target = text_encoder_config.get("target")
-                if not target:
-                    module_path = text_encoder_config.pop("module", "my_genQC.models.frozen_open_clip")
-                    encoder_type = text_encoder_config.get("type")
-                    if not encoder_type:
-                        raise ValueError("Text encoder config requires 'type' or explicit 'target'.")
-                    target = f"{module_path}.{encoder_type}"
-
-                text_encoder_config["target"] = target
-
-                self.text_encoder = ConfigModel.from_config(text_encoder_config, self.device)
+                self.text_encoder = self._load_embedder(dataset=dataset)
 
             self.logger.info(f"Dataset loaded from {dataset_path}")
             return dataset
-            
+
         except Exception as e:
             self.logger.error(f"Error loading dataset: {e}")
             raise
+
+
+    def load_dataset(self, dataset_path: str, load_embedder: bool=True, **kwargs):
+        if "dataset" in os.listdir(dataset_path):
+            self.logger.info("Detected preprocessed dataset. Loading directly...")
+            dataset = self._load_single_dataset(dataset_path=dataset_path, load_embedder=True, **kwargs)
+
+        else:  # combine multiple datasets with different numbers of qubits
+            self.logger.info("Detected multiple datasets in dataset_path. Loading all and combining them...")
+            datasets = []
+            parent_dir = dataset_path
+
+            for dataset in os.listdir(parent_dir):
+                dataset = self._load_single_dataset(os.path.join(parent_dir, dataset), load_embedder)
+
+                load_embedder = False  # only load embedder once
+
+                if self.device == torch.device("cuda"):
+                    dataset.dataset_to_gpu = True
+                datasets.append(dataset)
+
+            dataset = self.combine_datasets(
+                                datasets,
+                                model_scale_factor=4,
+                                balance_maxes=[int(1e8)] * len(datasets),
+                                pad_constant=len(datasets[0].gate_pool) + 1,
+                                device=self.device,
+                                bucket_batch_size=-1,  # TODO: check this parameter and balancing in general
+                                max_samples=[int(1e8)] * len(datasets),
+                                )
+
+        return dataset
+
 
     def combine_datasets(self, datasets: List[Any], **kwargs):
         """Combine multiple datasets into a mixed dataset.

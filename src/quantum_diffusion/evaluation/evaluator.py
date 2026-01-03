@@ -7,6 +7,7 @@ import ast
 from collections import Counter
 from pathlib import Path
 import hydra
+import wandb
 
 import numpy as np
 import torch
@@ -245,9 +246,19 @@ class SRVEvaluator:
             self.logger.info(f"{n_entangled} entangled qubits: {acc:.4f} acc")
 
         if self.wandb_run:
-            self.wandb_run.summary["eval/srv_exact_match_rate"] = srv_exact_match_rate
-            for i, acc in acc_per_entangled.items():
-                self.wandb_run.summary[f"eval/n_entangled_acc/{i}"] = acc
+            self.wandb_run.summary["eval/srv_exact_match_rate"] = float(srv_exact_match_rate)
+
+            xs = sorted(acc_per_entangled.keys())
+            ys = [float(acc_per_entangled[i]) for i in xs]
+
+            table = wandb.Table(data=[[x, y] for x, y in zip(xs, ys)], columns=["n_entangled", "acc"])
+            # noinspection PyTypeChecker
+            self.wandb_run.log({"eval/n_entangled_acc_table": table,
+                                'eval/n_entangled_acc_plot':
+                                    wandb.plot.line(table,
+                                                    "n_entangled",
+                                                    "acc",
+                                                    title="Eval n_entangled_acc vs n_entangled")})
 
         return srv_exact_match_rate, acc_per_entangled
 
