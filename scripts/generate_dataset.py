@@ -1,7 +1,5 @@
 #!/usr/bin/env python3
 """Script for generating quantum circuit datasets."""
-# TODO: inspect created datasets, create different datasets to test out
-# TODO: improve config structures, presets, etc
 
 import argparse
 import sys
@@ -42,7 +40,7 @@ def main(cfg):
     logger.info(f"Dataset configuration: {cfg}")
 
     # Initialize generator, generate dataset
-    generator = DatasetGenerator(device=device) # args.device if args.device else "cpu")
+    generator = DatasetGenerator(device=device)
 
     generation_start_time = time.time()
 
@@ -54,7 +52,7 @@ def main(cfg):
     for condition_name, metadata in generation_results.items():
         logger.info(f"{condition_name}: saved to {metadata['output_path']}")
 
-    # Print summary  TODO: better summary, more details
+    # Print summary
     print("\n" + "="*50)
     print("DATASET GENERATION SUMMARY")
     print("="*50)
