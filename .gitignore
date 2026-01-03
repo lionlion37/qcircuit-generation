@@ -35,6 +35,8 @@ coverage.xml
 htmlcov/
 scripts/logs/
 multirun/
+wandb/
+outputs/
 
 # Notebook artifacts
 .ipynb_checkpoints/
@@ -45,6 +47,7 @@ multirun/
 *.ckpt
 *.safetensors
 datasets/
+models/
 scripts/models/
 scripts/outputs/
 
