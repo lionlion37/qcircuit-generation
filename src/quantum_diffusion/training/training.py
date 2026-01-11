@@ -231,6 +231,7 @@ class DiffusionTrainer:
             Path(save_path).mkdir(parents=True, exist_ok=True)
             
             # Save model and config to the same directory
+            self.pipeline.text_encoder.params_config.version = "cloob"
             self.pipeline.store_pipeline(config_path=save_path + "/", save_path=save_path + "/")
             
             # Save configuration

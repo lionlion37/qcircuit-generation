@@ -1,6 +1,6 @@
 # Extended Data Table I. Page 10.
 
-variant: q3
+variant: q6 # 3
 
 variants:
   q3:
@@ -50,4 +50,4 @@ hydra:
   mode: MULTIRUN
   sweeper:
     params:
-      datasets.variant: q3,q4,q5,q6,q7,q8
+      datasets.variant: q6,q7,q8 #q3,q4,q5

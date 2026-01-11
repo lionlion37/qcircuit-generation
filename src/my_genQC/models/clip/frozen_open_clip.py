@@ -12,12 +12,13 @@ from ..config_model import ConfigModel
 from ...utils.async_fn import run_parallel_jobs
 from ...utils.misc_utils import infer_torch_device
 import open_clip
+from typing import Optional
 
 # %% ../../../src/training/clip/frozen_open_clip.ipynb 5
 @dataclass
 class FrozenOpenCLIPEmbedderConfig:
-    arch: str
-    version: str
+    arch: Optional[str] = None
+    version: Optional[str] = None
     #device: str
     max_length: int
     freeze: bool
@@ -143,6 +144,7 @@ class FrozenOpenCLIPEmbedder(ConfigModel):
 @dataclass
 class CachedFrozenOpenCLIPEmbedderConfig(FrozenOpenCLIPEmbedderConfig):
     enable_cache_token_limit: bool
+    version: Optional[str] = None
 
 # %% ../../../src/training/clip/frozen_open_clip.ipynb 18
 class CachedFrozenOpenCLIPEmbedder(FrozenOpenCLIPEmbedder):

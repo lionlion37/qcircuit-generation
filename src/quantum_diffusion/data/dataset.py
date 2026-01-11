@@ -264,6 +264,7 @@ class DatasetLoader:
         text_encoder_config["target"] = target
 
         text_encoder = ConfigModel.from_config(text_encoder_config, self.device)
+        text_encoder.params_config.version = "cloob"
 
         # load local weights, e.g. from CLOOB
         if self.config["text_encoder"]["params"]["local_weights_path"]:

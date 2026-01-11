@@ -17,10 +17,13 @@ from quantum_diffusion.training import DiffusionTrainer, ModelManager
 from quantum_diffusion.utils import Logger, ExperimentLogger, setup_logging
 
 from my_genQC.utils.misc_utils import infer_torch_device
+import my_genQC
 
 
 @hydra.main(config_path="../conf", config_name="config", version_base=None)
 def main(cfg):
+    print("my_genQC:", my_genQC.__file__)
+
     cfg = cfg["training"]
 
     if cfg.general.device == "auto":
@@ -45,7 +48,7 @@ def main(cfg):
 
         dataset_loader = DatasetLoader(device=device, config=cfg)
         dataset = dataset_loader.load_dataset(cfg.general.dataset)
-        
+
         # Create data loaders
         batch_size = cfg.training.batch_size or 32
         dataloaders = dataset_loader.get_dataloaders(dataset, batch_size=batch_size, text_encoder_njobs=cfg.general.njobs)
