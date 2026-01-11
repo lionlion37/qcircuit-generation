@@ -8,6 +8,7 @@ from collections import Counter
 from pathlib import Path
 import hydra
 import wandb
+import random
 
 import numpy as np
 import torch
@@ -43,8 +44,9 @@ class SRVEvaluator:
         self.samples = min(self.config.num_samples, self.dataset.x.shape[0])
         if self.samples == 0:
             raise ValueError("Dataset is empty - nothing to evaluate.")
+        self.idx = random.sample(range(len(self.dataset.y)), k=self.samples)  # unique and shuffled indices
         self.system_size = self.dataset.x.shape[1]
-        self.max_gates = self.dataset.x.shape[2]
+        self.max_gates = self.config.get("max_gates", self.dataset.x.shape[2])
         self.num_qubits = getattr(self.dataset.params_config, "num_of_qubits", self.system_size)
 
         self.pipeline = self._load_pipeline(model_dir=Path(self.config.model_dir) if self.config.model_dir else None,
@@ -151,7 +153,8 @@ class SRVEvaluator:
     def generate_tensors(self, save_output: bool = True, save_path: str | None = None):
         self.logger.info("Starting tensor generation...")
 
-        prompts = [str(p) for p in self.dataset.y[:self.samples]]
+        self.idx = random.sample(range(len(self.dataset.y)), k=self.samples)  # unique indices
+        prompts = [str(self.dataset.y[i]) for i in self.idx]
 
         start_time = time.time()
         tensors_out = generate_tensors(
@@ -212,13 +215,16 @@ class SRVEvaluator:
             self.wandb_run.summary["eval/decoded_circuits"] = len(backend_circuits)
             self.wandb_run.summary["eval/decode_failures"] = err_cnt
 
-        target_srvs = self._parse_srv_targets(self.dataset.y[:self.samples])[valid_indices]
+        target_srvs = self._parse_srv_targets(self.dataset.y[self.idx])[valid_indices]
 
         self.logger.info("Calculating SRVs...")
+
+        start_time = time.time()
         predicted_srvs = torch.tensor(
             get_srvs(self.simulator, backend_circuits, n_jobs=1),
             dtype=torch.long,
         )
+        self.logger.info(f"Finished SRV calculation. Took {(time.time() - start_time):.2f} seconds.")
 
         if save_output and save_path:
             self.logger.info(f"Saving generated tensors to {save_path}...")

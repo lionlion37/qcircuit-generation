@@ -329,10 +329,10 @@ class DatasetLoader:
             raise
 
 
-    def load_dataset(self, dataset_path: str, load_embedder: bool=True, **kwargs):
+    def load_dataset(self, dataset_path: str, load_embedder: bool = True, **kwargs):
         if "dataset" in os.listdir(dataset_path):
             self.logger.info("Detected preprocessed dataset. Loading directly...")
-            dataset = self._load_single_dataset(dataset_path=dataset_path, load_embedder=True, **kwargs)
+            dataset = self._load_single_dataset(dataset_path=dataset_path, load_embedder=load_embedder, **kwargs)
 
         else:  # combine multiple datasets with different numbers of qubits
             self.logger.info("Detected multiple datasets in dataset_path. Loading all and combining them...")
