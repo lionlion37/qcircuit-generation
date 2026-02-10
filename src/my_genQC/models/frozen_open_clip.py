@@ -180,7 +180,7 @@ class FrozenOpenCLIPEmbedder(ConfigModel):
 # %% ../../src/training/frozen_open_clip.ipynb 17
 @dataclass
 class CachedFrozenOpenCLIPEmbedderConfig(FrozenOpenCLIPEmbedderConfig):
-    enable_cache_token_limit: bool
+    enable_cache_token_limit: bool = True
 
 # %% ../../src/training/frozen_open_clip.ipynb 18
 class CachedFrozenOpenCLIPEmbedder(FrozenOpenCLIPEmbedder):
