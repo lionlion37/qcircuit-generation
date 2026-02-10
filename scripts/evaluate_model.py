@@ -156,7 +156,7 @@ def main(cfg):
         device=device,
     )
 
-    pipeline.guidance_sample_mode = "rescaled"
+    pipeline.guidance_sample_mode = cfg.model_params.get("guidance_mode", "normal")
     pipeline.scheduler.set_timesteps(cfg.model_params.sample_steps)
 
     samples = min(cfg.num_samples, dataset.x.shape[0])
@@ -238,7 +238,14 @@ def main(cfg):
 
     vocabulary = {gate: idx for idx, gate in enumerate(dataset.gate_pool)}
     tokenizer = CircuitTokenizer(vocabulary)
-    simulator = Simulator(CircuitBackendType.QUDITKIT)
+    backend_name = str(cfg.get("backend", "quditkit")).lower()
+    if backend_name == "quditkit":
+        backend_type = CircuitBackendType.QUDITKIT
+    elif backend_name == "qiskit":
+        backend_type = CircuitBackendType.QISKIT
+    else:
+        raise ValueError(f"Unsupported evaluation backend: {backend_name}")
+    simulator = Simulator(backend_type)
 
     decoded_circuits, _ = decode_tensors_to_backend(
         simulator=simulator,

@@ -91,10 +91,11 @@ class DiffusionPipeline(Pipeline):
         def _get_save_path(config_save_path, appendix):
             _save_path = default(save_path, config_path) + appendix
             if "save_path" in config_save_path:
-                if exists(config_save_path["save_path"]):
-                    _save_path = config_save_path["save_path"]
+                configured_path = config_save_path["save_path"]
+                if configured_path is not None and os.path.exists(configured_path):
+                    _save_path = configured_path
                 else:
-                    config_save_path.pop("save_path")
+                    config_save_path.pop("save_path", None)
             return _save_path   
         
         if exists(device):
@@ -325,7 +326,8 @@ class DiffusionPipeline(Pipeline):
         b, s, t = latents.shape          
         
         #start async memcpy
-        latents = latents.to(self.device, non_blocking=self.non_blocking)  
+        latents = latents.to(self.device, non_blocking=self.non_blocking)
+        latents_tokens = latents
         latents = self.embedder.embed(latents)  
          
         #do the cond embedding with CLIP                     
@@ -347,8 +349,21 @@ class DiffusionPipeline(Pipeline):
         #predict eps
         eps = self.model(noisy_latents, timesteps, y_emb)
             
-        #comp mse
-        loss = self.loss_fn(eps, noise)
+        # Weighted denoising objective:
+        # - ignore explicit pad token regions
+        # - downweight background-only regions that otherwise dominate mixed-size training
+        loss_map = F.mse_loss(eps, noise, reduction="none").mean(dim=1)  # [b, s, t]
+
+        pad_token = int(self.model.params_config.num_clrs - 1)
+        pad_mask = latents_tokens.abs() == pad_token
+        bg_mask = latents_tokens == 0
+
+        weights = torch.ones_like(loss_map, dtype=loss_map.dtype)
+        weights = torch.where(bg_mask, torch.full_like(weights, 0.1), weights)
+        weights = torch.where(pad_mask, torch.zeros_like(weights), weights)
+
+        denom = torch.clamp(weights.sum(), min=1.0)
+        loss = (loss_map * weights).sum() / denom
         
         #log the loss
         return loss

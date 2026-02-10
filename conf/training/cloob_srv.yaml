@@ -1,8 +1,8 @@
 general:
   output_path: ./models/trained/
-  model_name: cloob_rn50x4_model  # TODO: this is also present below under training
-  experiment_name: cloob_rn50x4_model_training  # TODO: this is also present below under training
-  dataset: ./datasets/paper_qiskit/ # ./datasets/paper_qiskit
+  model_name: cloob_model
+  experiment_name: cloob_model_training
+  dataset: ./datasets/qc_srv_dataset_3to8qubit/
   njobs: 16
   device: auto
   resume: false
@@ -17,7 +17,7 @@ model:
     clr_dim: 8
     num_clrs: 9
     t_emb_size: 256
-    cond_emb_size: 640
+    cond_emb_size: 512
     num_heads: [8, 8, 2]
     num_res_blocks: [2, 2, 2]
     transformer_depths: [1, 1, 1]
@@ -32,25 +32,25 @@ training:
   guidance_train_p: 0.1
   cached_text_enc: true
   output_path: ./models/trained/
-  model_name: cloob_rn50x4_model
-  experiment_name: cloob_rn50x4_model_training
+  model_name: cloob_model
+  experiment_name: cloob_model_training
   ckpt_path: ./cp_saves/
   ckpt_interval: 3
   wandb:
     enable: true
     project: qcircuit-generation
-    run_name: cloob_rn50x4_model_training
+    run_name: cloob_model_training
 
 text_encoder:
   type: CachedFrozenOpenCLIPEmbedder
   params:
-    arch: RN50x4
-    version: null #./models/encoders/RN50.pt # openai
+    arch: RN50
+    version: null
     max_length: 77
     freeze: true
     layer: penultimate
     enable_cache_token_limit: true
-    local_weights_path: "./models/encoders/clip_rn50x4_yfcc_epoch_28.pt"
+    local_weights_path: "./models/encoders/clip_rn50_yfcc_epoch_28.pt"
 
 scheduler:
   type: DDIMScheduler

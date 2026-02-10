@@ -1,31 +1,18 @@
-dataset: ./datasets/paper_quditkit/srv_8q_dataset # srv_dataset
-model_dir: ./models/cloob_rn50
+dataset: ./datasets/paper_quditkit/srv_8q_dataset
+model_dir: ./models/trained/cloob_model
 hf_repo: null
-num_samples: 5000 # 999999
-# max_gates: 16
-save_output: false # true
+backend: quditkit
+num_samples: 5000
+save_output: false
 save_folder: ./scripts/inference/
-local_weights_path: ./models/encoders/clip_rn50_yfcc_epoch_28.pt
 
 model_params:
-  guidance_scale: 1.5 
+  guidance_mode: normal
+  guidance_scale: 1.5
   sample_steps: 50
-  auto_batch_size: 1024 # 4086
+  auto_batch_size: 1024
 
 wandb:
   enable: true
   project: qcircuit-generation
-  run_name: 8q_remote_model_evaluation
-
-text_encoder:
-    target: my_genQC.models.frozen_open_clip.CachedFrozenOpenCLIPEmbedder
-    save_path: null
-    save_datetime: 01/11/2026 14:05:54
-    save_type: null
-    params:
-      arch: RN50
-      version: null
-      max_length: 23
-      freeze: true
-      layer: penultimate
-      enable_cache_token_limit: true
+  run_name: cloob_rn50_eval_8q
