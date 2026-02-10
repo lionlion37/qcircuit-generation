@@ -1,0 +1,92 @@
+target: my_genQC.pipeline.diffusion_pipeline.DiffusionPipeline
+save_datetime: 01/11/2026 14:05:54
+params:
+  scheduler:
+    target: genQC.scheduler.scheduler_ddim.DDIMScheduler
+    params:
+      device: cuda
+      num_train_timesteps: 1000
+      beta_start: 0.0001
+      beta_end: 0.02
+      beta_schedule: cos_alpha
+      input_perturbation: 0.1
+      prediction_type: epsilon
+      eta: 1
+  model:
+    target: genQC.models.unet_qc.QC_Cond_UNet
+    save_path: ./models/cloob_rn50/model.pt
+    save_datetime: 01/11/2026 14:05:54
+    save_type: pt
+    params:
+      model_features:
+      - 128
+      - 128
+      - 256
+      clr_dim: 8
+      num_clrs: 4
+      t_emb_size: 256
+      cond_emb_size: 512
+      num_heads:
+      - 8
+      - 8
+      - 2
+      num_res_blocks:
+      - 2
+      - 2
+      - 2
+      transformer_depths:
+      - 1
+      - 1
+      - 1
+  text_encoder:
+    target: my_genQC.models.frozen_open_clip.CachedFrozenOpenCLIPEmbedder
+    save_path: null
+    save_datetime: 01/11/2026 14:05:54
+    save_type: null
+    params:
+      arch: RN50
+      version: null
+      max_length: 23
+      freeze: true
+      layer: penultimate
+      enable_cache_token_limit: true
+      local_weights_path: ./models/encoders/clip_rn50_yfcc_epoch_28.pt
+  embedder:
+    target: genQC.models.unet_qc.QC_Cond_UNet
+    save_path: ./models/cloob_rn50/embedder.pt
+    save_datetime: 01/11/2026 14:05:54
+    save_type: pt
+    params:
+      model_features:
+      - 128
+      - 128
+      - 256
+      clr_dim: 8
+      num_clrs: 4
+      t_emb_size: 256
+      cond_emb_size: 512
+      num_heads:
+      - 8
+      - 8
+      - 2
+      num_res_blocks:
+      - 2
+      - 2
+      - 2
+      transformer_depths:
+      - 1
+      - 1
+      - 1
+  device: cuda
+  enable_guidance_train: true
+  guidance_train_p: 0.1
+  cached_text_enc: true
+  add_config: {}
+fit:
+  num_epochs: 75
+  batch_size: 256
+  lr: null
+  lr_sched: NoneType
+  optimizer: torch.optim.adam.Adam
+  dataset_size_train: 8095
+  dataset_size_valid: 900
