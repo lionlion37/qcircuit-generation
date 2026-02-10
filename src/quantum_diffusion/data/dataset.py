@@ -309,6 +309,12 @@ class DatasetLoader:
 
 
     def load_dataset(self, dataset_path: str, load_embedder: bool = True, **kwargs):
+        # Arguments used only when stitching multiple per-qubit datasets together.
+        combine_bucket_batch_size = kwargs.pop("bucket_batch_size", -1)
+        combine_model_scale_factor = kwargs.pop("model_scale_factor", 4)
+        combine_balance_max = kwargs.pop("balance_max", int(1e8))
+        combine_max_samples = kwargs.pop("max_samples", int(1e8))
+
         if "dataset" in os.listdir(dataset_path):
             self.logger.info("Detected preprocessed dataset. Loading directly...")
             dataset = self._load_single_dataset(dataset_path=dataset_path, load_embedder=load_embedder, **kwargs)
@@ -318,8 +324,12 @@ class DatasetLoader:
             datasets = []
             parent_dir = dataset_path
 
-            for dataset in os.listdir(parent_dir):
-                dataset = self._load_single_dataset(os.path.join(parent_dir, dataset), load_embedder)
+            for dataset_name in sorted(os.listdir(parent_dir)):
+                dataset_dir = os.path.join(parent_dir, dataset_name)
+                if not os.path.isdir(dataset_dir):
+                    continue
+
+                dataset = self._load_single_dataset(dataset_dir, load_embedder)
 
                 load_embedder = False  # only load embedder once
 
@@ -327,14 +337,17 @@ class DatasetLoader:
                     dataset.dataset_to_gpu = True
                 datasets.append(dataset)
 
+            if not datasets:
+                raise FileNotFoundError(f"No dataset directories found under {parent_dir}")
+
             dataset = self.combine_datasets(
                                 datasets,
-                                model_scale_factor=4,
-                                balance_maxes=[int(1e8)] * len(datasets),
+                                model_scale_factor=combine_model_scale_factor,
+                                balance_maxes=[combine_balance_max] * len(datasets),
                                 pad_constant=len(datasets[0].gate_pool) + 1,
                                 device=self.device,
-                                bucket_batch_size=-1,  # TODO: check this parameter and balancing in general
-                                max_samples=[int(1e8)] * len(datasets),
+                                bucket_batch_size=combine_bucket_batch_size,
+                                max_samples=[combine_max_samples] * len(datasets),
                                 )
 
         return dataset

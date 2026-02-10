@@ -187,10 +187,12 @@ class Pipeline(PipelineIO):
     def fit(self, num_epochs: int, data_loaders: DataLoaders, lr: float=None, lr_sched=None, log_summary=True, ckpt_interval=None, ckpt_path=None):
         if not hasattr(self, "loss_fn"): raise RuntimeError("'compile' has to be called first")       
        
-        self._set_opt_param(lr=lr)  
-        if not hasattr(self, "lr_sched"):
-            if lr_sched: self.lr_sched = lr_sched(self.optimizer)
-            else: self.lr_sched = None
+        self._set_opt_param(lr=lr)
+        # Allow replacing/resetting LR schedules between staged training runs.
+        if lr_sched:
+            self.lr_sched = lr_sched(self.optimizer)
+        else:
+            self.lr_sched = None
 
         if exists(ckpt_interval) and exists(ckpt_path):
             self.cbs = [*(self.cbs or []), CheckpointCB(ckpt_interval, ckpt_path)]

@@ -1,9 +1,7 @@
 #!/usr/bin/env python3
 """Script for training diffusion training on quantum circuits."""
 
-import argparse
 import sys
-import os
 from pathlib import Path
 import time
 import hydra
@@ -18,6 +16,33 @@ from quantum_diffusion.utils import Logger, ExperimentLogger, setup_logging
 
 from my_genQC.utils.misc_utils import infer_torch_device
 import my_genQC
+
+
+def build_one_cycle_scheduler(training_cfg, num_epochs: int, steps_per_epoch: int):
+    """Build optional OneCycle LR scheduler factory from config."""
+    one_cycle_cfg = training_cfg.get("one_cycle", {})
+    if not one_cycle_cfg or not one_cycle_cfg.get("enable", False):
+        return None
+
+    max_lr = float(one_cycle_cfg.get("max_lr", training_cfg.get("learning_rate", 3e-4)))
+    pct_start = float(one_cycle_cfg.get("pct_start", 0.1))
+    anneal_strategy = str(one_cycle_cfg.get("anneal_strategy", "cos"))
+    div_factor = float(one_cycle_cfg.get("div_factor", 25.0))
+    final_div_factor = float(one_cycle_cfg.get("final_div_factor", 1e4))
+
+    def _factory(optimizer):
+        return torch.optim.lr_scheduler.OneCycleLR(
+            optimizer=optimizer,
+            max_lr=max_lr,
+            epochs=num_epochs,
+            steps_per_epoch=steps_per_epoch,
+            pct_start=pct_start,
+            anneal_strategy=anneal_strategy,
+            div_factor=div_factor,
+            final_div_factor=final_div_factor,
+        )
+
+    return _factory
 
 
 @hydra.main(config_path="../conf", config_name="config", version_base=None)
@@ -47,11 +72,22 @@ def main(cfg):
         logger.info(f"Loading dataset from {cfg.general.dataset}")
 
         dataset_loader = DatasetLoader(device=device, config=cfg)
-        dataset = dataset_loader.load_dataset(cfg.general.dataset)
 
-        # Create data loaders
-        batch_size = cfg.training.batch_size or 32
-        dataloaders = dataset_loader.get_dataloaders(dataset, batch_size=batch_size, text_encoder_njobs=cfg.general.njobs)
+        staged_cfg = cfg.get("staged_training", {})
+        staged_enabled = bool(staged_cfg and staged_cfg.get("enable", False))
+        stage1_cfg = staged_cfg.get("stage1", {}) if staged_enabled else {}
+        stage1_batch_size = stage1_cfg.get("batch_size", cfg.training.batch_size or 32)
+        stage1_bucket_batch_size = stage1_cfg.get("bucket_batch_size", -1)
+
+        dataset = dataset_loader.load_dataset(
+            cfg.general.dataset,
+            bucket_batch_size=stage1_bucket_batch_size,
+        )
+        dataloaders = dataset_loader.get_dataloaders(
+            dataset,
+            batch_size=stage1_batch_size,
+            text_encoder_njobs=cfg.general.njobs,
+        )
         
         # Initialize trainer
         trainer = DiffusionTrainer(config=cfg, device=device)
@@ -82,9 +118,69 @@ def main(cfg):
         
         # Custom training loop with experiment logging
         training_config = trainer.config["training"]
-        num_epochs = training_config.get("num_epochs", 10)
+        total_epochs = 0
 
-        history = trainer.train(dataloaders, save_path=cfg.general.output_path)
+        if staged_enabled:
+            stage1_epochs = int(stage1_cfg.get("num_epochs", training_config.get("num_epochs", 10)))
+            stage1_sched = build_one_cycle_scheduler(training_config, stage1_epochs, len(dataloaders.train))
+
+            trainer.train(
+                dataloaders,
+                num_epochs=stage1_epochs,
+                lr_sched=stage1_sched,
+                setup_wandb=True,
+                finish_wandb=False,
+                stage_name="stage1-max-padding",
+            )
+            total_epochs += stage1_epochs
+
+            stage2_cfg = staged_cfg.get("stage2", {})
+            stage2_epochs = int(stage2_cfg.get("num_epochs", 0))
+            if stage2_epochs > 0:
+                stage2_batch_size = int(stage2_cfg.get("batch_size", 1))
+                stage2_bucket_batch_size = int(stage2_cfg.get("bucket_batch_size", 256))
+
+                logger.info(
+                    "Preparing stage 2 dataloaders with "
+                    f"{stage2_batch_size=} and {stage2_bucket_batch_size=}"
+                )
+                stage2_dataset = dataset_loader.load_dataset(
+                    cfg.general.dataset,
+                    load_embedder=False,
+                    bucket_batch_size=stage2_bucket_batch_size,
+                )
+                dataset_loader.text_encoder = trainer.pipeline.text_encoder
+                stage2_dataloaders = dataset_loader.get_dataloaders(
+                    stage2_dataset,
+                    batch_size=stage2_batch_size,
+                    text_encoder_njobs=cfg.general.njobs,
+                )
+                stage2_sched = build_one_cycle_scheduler(training_config, stage2_epochs, len(stage2_dataloaders.train))
+
+                trainer.train(
+                    stage2_dataloaders,
+                    num_epochs=stage2_epochs,
+                    lr_sched=stage2_sched,
+                    setup_wandb=False,
+                    finish_wandb=True,
+                    stage_name="stage2-bucket-padding",
+                )
+                total_epochs += stage2_epochs
+            else:
+                # Close logging if stage 2 is disabled.
+                if trainer.wandb_run:
+                    trainer.wandb_run.finish()
+                    trainer.wandb_run = None
+        else:
+            num_epochs = int(training_config.get("num_epochs", 10))
+            lr_sched = build_one_cycle_scheduler(training_config, num_epochs, len(dataloaders.train))
+            trainer.train(
+                dataloaders,
+                num_epochs=num_epochs,
+                lr_sched=lr_sched,
+                stage_name="single-stage",
+            )
+            total_epochs = num_epochs
         
         # Save model
         output_path = cfg.general.output_path
@@ -112,8 +208,16 @@ def main(cfg):
         print("="*50)
         print(f"Model saved to: {output_path}")
         print(f"Model type: {trainer.config['model']['type']}")
-        print(f"Training epochs: {num_epochs}")
-        print(f"Batch size: {batch_size}")
+        print(f"Training epochs: {total_epochs}")
+        print(f"Batch size (stage 1): {stage1_batch_size}")
+        if staged_enabled:
+            stage2_cfg = staged_cfg.get("stage2", {})
+            if int(stage2_cfg.get("num_epochs", 0)) > 0:
+                print(
+                    "Batch size (stage 2): "
+                    f"{int(stage2_cfg.get('batch_size', 1))} "
+                    f"(bucket_batch_size={int(stage2_cfg.get('bucket_batch_size', 256))})"
+                )
         print(f"Learning rate: {trainer.config['training']['learning_rate']}")
         print(f"Device used: {trainer.device}")
         print(f"Training duration: {duration:.2f} seconds")

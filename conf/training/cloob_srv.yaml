@@ -14,13 +14,13 @@ model:
 
   params:
     model_features: [128, 128, 256]
-    clr_dim: 8
-    num_clrs: 9
+    clr_dim: 4
+    num_clrs: 4
     t_emb_size: 256
     cond_emb_size: 512
     num_heads: [8, 8, 2]
-    num_res_blocks: [2, 2, 2]
-    transformer_depths: [1, 1, 1]
+    num_res_blocks: [2, 2, 4]
+    transformer_depths: [1, 2, 1]
 
 training:
   learning_rate: 3e-4
@@ -40,13 +40,31 @@ training:
     enable: true
     project: qcircuit-generation
     run_name: cloob_model_training
+  one_cycle:
+    enable: true
+    max_lr: 3e-4
+    pct_start: 0.1
+    anneal_strategy: cos
+    div_factor: 25.0
+    final_div_factor: 10000.0
+
+staged_training:
+  enable: true
+  stage1:
+    num_epochs: 60
+    batch_size: 256
+    bucket_batch_size: -1
+  stage2:
+    num_epochs: 15
+    batch_size: 1
+    bucket_batch_size: 256
 
 text_encoder:
   type: CachedFrozenOpenCLIPEmbedder
   params:
     arch: RN50
     version: null
-    max_length: 77
+    max_length: 23
     freeze: true
     layer: penultimate
     enable_cache_token_limit: true

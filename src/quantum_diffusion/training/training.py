@@ -177,32 +177,50 @@ class DiffusionTrainer:
         run_name = wandb_cfg.get("run_name", general_cfg.get("experiment_name"))
         return wandb.init(project=project, name=run_name, config=dict(self.config))
     
-    def train(self, dataloaders, save_path: Optional[str] = None) -> Dict:
+    def train(
+        self,
+        dataloaders,
+        save_path: Optional[str] = None,
+        num_epochs: Optional[int] = None,
+        lr_sched=None,
+        setup_wandb: bool = True,
+        finish_wandb: bool = True,
+        stage_name: Optional[str] = None,
+    ) -> Dict:
         """Train the diffusion model.
         
         Args:
             dataloaders: Training and validation data loaders
             save_path: Path to save the trained model
+            num_epochs: Optional epoch override for staged training
+            lr_sched: Optional LR scheduler factory called as `lr_sched(optimizer)`
+            setup_wandb: Whether to initialize wandb logging for this call
+            finish_wandb: Whether to close wandb at the end of this call
+            stage_name: Optional stage label for logs
             
         Returns:
             Training history and metrics
         """
         try:
             training_config = dict(self.config["training"])
-            num_epochs = training_config.get("num_epochs", 10)
+            num_epochs = num_epochs or training_config.get("num_epochs", 10)
+            stage_prefix = f"[{stage_name}] " if stage_name else ""
             
-            self.logger.info(f"Starting training for {num_epochs} epochs...")
+            self.logger.info(f"{stage_prefix}Starting training for {num_epochs} epochs...")
             
-            self.wandb_run = self._setup_wandb()
+            if setup_wandb and not self.wandb_run:
+                self.wandb_run = self._setup_wandb()
             if self.wandb_run:
                 cbs = list(self.pipeline.cbs) if getattr(self.pipeline, "cbs", None) else []
-                cbs.append(WandbLoggingCallback(self.wandb_run))
+                if not any(isinstance(cb, WandbLoggingCallback) for cb in cbs):
+                    cbs.append(WandbLoggingCallback(self.wandb_run))
                 self.pipeline.cbs = cbs
 
             # Train the model
             history = self.pipeline.fit(
                 num_epochs=num_epochs,
                 data_loaders=dataloaders,
+                lr_sched=lr_sched,
                 ckpt_interval=self.config.training.ckpt_interval,
                 ckpt_path=self.config.training.ckpt_path,
             )
@@ -218,8 +236,9 @@ class DiffusionTrainer:
             self.logger.error(f"Error during training: {e}")
             raise
         finally:
-            if self.wandb_run:
+            if finish_wandb and self.wandb_run:
                 self.wandb_run.finish()
+                self.wandb_run = None
     
     def save_model(self, save_path: str) -> None:
         """Save the trained model and configuration.
