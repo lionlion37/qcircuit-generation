@@ -8,15 +8,79 @@ __all__ = ['run_parallel_jobs', 'MemoryMappedArray']
 # %% ../../src/utils/async_fn.ipynb 2
 from ..imports import *
 from joblib import Parallel, delayed
+from tqdm import tqdm
+import math
 
 from tensordict.tensordict import MemoryMappedTensor
 import tempfile
 
 # %% ../../src/utils/async_fn.ipynb 4
-def run_parallel_jobs(f: callable, loop_set, n_jobs: int = 1):      
-    if n_jobs > 1: res = Parallel(n_jobs=n_jobs)(delayed(f)(x) for x in loop_set)         
-    else:          res = [f(x) for x in loop_set]      
-    return res 
+def _chunk_iterable(it, size: int):
+    """Yield fixed-size chunks from any iterable without materializing the whole thing."""
+    chunk = []
+    for item in it:
+        chunk.append(item)
+        if len(chunk) == size:
+            yield chunk
+            chunk = []
+    if chunk:
+        yield chunk
+
+
+def run_parallel_jobs(f: callable,
+                      loop_set,
+                      n_jobs: int = 1,
+                      prefer: str = "processes",
+                      batch_size: int | None = None,
+                      progress: bool = False):
+    """
+    Run a function in parallel over an iterable.
+
+    - prefer="processes" avoids the GIL for Python-heavy work (default).
+    - batch_size groups items to amortize scheduling/pickling overhead.
+    - progress adds a tqdm bar; if the iterable has no length, tqdm still shows a simple counter.
+    """
+    def _maybe_len(obj):
+        try:
+            return len(obj)
+        except Exception:
+            return None
+
+    # fast path
+    if n_jobs == 1:
+        iterable = loop_set
+        total = _maybe_len(loop_set)
+        if progress:
+            iterable = tqdm(iterable, total=total)
+        return [f(x) for x in iterable]
+
+    if batch_size:
+        def _run_batch(batch):
+            return [f(x) for x in batch]
+
+        total_items = _maybe_len(loop_set)
+        total_batches = None
+        if total_items is not None:
+            total_batches = math.ceil(total_items / batch_size)
+
+        batches = _chunk_iterable(loop_set, batch_size)
+        if progress:
+            batches = tqdm(batches, total=total_batches)
+
+        res_batches = Parallel(n_jobs=n_jobs,
+                               prefer=prefer,
+                               batch_size="auto")(delayed(_run_batch)(b) for b in batches)
+        # flatten
+        return [item for batch in res_batches for item in batch]
+
+    iterable = loop_set
+    total = _maybe_len(loop_set)
+    if progress:
+        iterable = tqdm(iterable, total=total)
+
+    return Parallel(n_jobs=n_jobs,
+                    prefer=prefer,
+                    batch_size="auto")(delayed(f)(x) for x in iterable)
 
 # %% ../../src/utils/async_fn.ipynb 6
 class MemoryMappedArray():

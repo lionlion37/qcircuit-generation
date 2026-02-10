@@ -23,6 +23,26 @@ class FrozenOpenCLIPEmbedderConfig:
     max_length: int
     freeze: bool
     layer: str
+    local_weights_path: Optional[str] = None
+
+
+def _remap_cloob_key(k: str) -> str:
+    if k.startswith("transformer.transformer."):
+        k = k.replace("transformer.transformer.", "transformer.", 1)
+
+    if k == "transformer.positional_embedding":
+        k = "positional_embedding"
+    if k == "transformer.text_projection":
+        k = "text_projection"
+    if k == "logit_inv_tau":
+        k = "logit_scale"
+
+    if k.startswith("transformer.token_embedding."):
+        k = k.replace("transformer.token_embedding.", "token_embedding.", 1)
+    if k.startswith("transformer.ln_final."):
+        k = k.replace("transformer.ln_final.", "ln_final.", 1)
+
+    return k
 
 # %% ../../../src/training/clip/frozen_open_clip.ipynb 6
 class FrozenOpenCLIPEmbedder(ConfigModel):
@@ -36,17 +56,20 @@ class FrozenOpenCLIPEmbedder(ConfigModel):
 
     njobs = 1
 
-    def __init__(self, arch="ViT-B-32", version="datacomp_xl_s13b_b90k", max_length=77, freeze=True, layer="penultimate", **kwargs):
+    def __init__(self, arch="ViT-B-32", version="datacomp_xl_s13b_b90k", max_length=77, freeze=True, layer="penultimate", local_weights_path: Optional[str] = None, **kwargs):
         super().__init__(**kwargs)        
         
         assert layer in self.LAYERS     
-        self.params_config = FrozenOpenCLIPEmbedderConfig(arch, version, max_length, freeze, layer)
+        self.params_config = FrozenOpenCLIPEmbedderConfig(arch, version, max_length, freeze, layer, local_weights_path)
         
         model, _, _ = open_clip.create_model_and_transforms(arch, device="cpu", pretrained=version)
         self.device = "cpu"
         
         del model.visual     
         self.model = model
+        self.local_weights_path = local_weights_path
+        if exists(local_weights_path):
+            self.load_local_weights(local_weights_path)
         # self.to(device)
         
         self.tokenizer = open_clip.get_tokenizer(arch)
@@ -64,6 +87,21 @@ class FrozenOpenCLIPEmbedder(ConfigModel):
 
         #create empty token, can also be, e.g., A nice picture
         self.empty_token = self.tokenize_and_push_to_device("")
+
+    def load_local_weights(self, local_weights_path: str):
+        checkpoint = torch.load(local_weights_path, map_location="cpu", weights_only=True)
+        if isinstance(checkpoint, dict) and "state_dict" in checkpoint:
+            sd = checkpoint["state_dict"]
+        else:
+            sd = checkpoint
+
+        sd = {k.replace("module.", "", 1): v for k, v in sd.items()}
+        sd = {_remap_cloob_key(k): v for k, v in sd.items()}
+
+        incomp = self.model.load_state_dict(sd, strict=False)
+        print(f"[INFO]: Loaded local text encoder weights from {local_weights_path}")
+        print(f"[WARNING]: {len(incomp.missing_keys)} missing keys, first 10: {incomp.missing_keys[:10]}")
+        print(f"[WARNING]: {len(incomp.unexpected_keys)} unexpected keys, first 10: {incomp.unexpected_keys[:10]}")
         
     def freeze(self, freeze: bool = True):
         super().freeze(freeze=freeze)
@@ -150,11 +188,11 @@ class CachedFrozenOpenCLIPEmbedderConfig(FrozenOpenCLIPEmbedderConfig):
 class CachedFrozenOpenCLIPEmbedder(FrozenOpenCLIPEmbedder):
     """Adds caching support to `FrozenOpenCLIPEmbedder`."""
 
-    def __init__(self, arch="ViT-B-32", version="datacomp_xl_s13b_b90k", max_length=77, freeze=True, layer="penultimate", enable_cache_token_limit: bool = True, **kwargs):
-        super().__init__(arch=arch, version=version, max_length=max_length, freeze=freeze, layer=layer, **kwargs)  
+    def __init__(self, arch="ViT-B-32", version="datacomp_xl_s13b_b90k", max_length=77, freeze=True, layer="penultimate", enable_cache_token_limit: bool = True, local_weights_path: Optional[str] = None, **kwargs):
+        super().__init__(arch=arch, version=version, max_length=max_length, freeze=freeze, layer=layer, local_weights_path=local_weights_path, **kwargs)  
         self.enable_cache_token_limit = enable_cache_token_limit
 
-        self.params_config = CachedFrozenOpenCLIPEmbedderConfig(arch, version, max_length, freeze, layer, enable_cache_token_limit)
+        self.params_config = CachedFrozenOpenCLIPEmbedderConfig(arch, version, max_length, freeze, layer, local_weights_path, enable_cache_token_limit)
     
     def get_token_count(self, tokens, padding_token=0):
         # tokens .. [b, seq]

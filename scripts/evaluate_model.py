@@ -286,7 +286,7 @@ def main(cfg):
         print("No target unitaries in dataset; running SRV evaluation.")
         target_srvs = parse_srv_targets(dataset.y[:samples])[valid_indices]
         predicted_srvs = torch.tensor(
-            get_srvs(simulator, backend_circuits, n_jobs=16),  # TODO: rewrite to use quditkit
+            get_srvs(simulator, backend_circuits, n_jobs=16),
             dtype=torch.long,
         )
 
