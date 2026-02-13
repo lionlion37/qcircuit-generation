@@ -264,14 +264,14 @@ class DatasetLoader:
         text_encoder_config["target"] = target
 
         text_encoder = ConfigModel.from_config(text_encoder_config, self.device)
-        text_encoder.params_config.version = "cloob"
 
-        # load local weights, e.g. from CLOOB
-        if self.config["text_encoder"]["params"]["local_weights_path"]:
-            self.logger.info("Loading local text embedder weights...")
-            self.logger.warning("Only CLOOB weights are loadable!")
+        # load CLOOB weights with key remapping (separate from standard OpenCLIP local_weights_path)
+        cloob_weights_path = self.config["text_encoder"]["params"].get("cloob_weights_path")
+        if cloob_weights_path:
+            self.logger.info(f"Loading CLOOB weights from {cloob_weights_path}...")
+            text_encoder.params_config.version = "cloob"
 
-            cloob_checkpoint = torch.load(self.config["text_encoder"]["params"]["local_weights_path"], weights_only=True)
+            cloob_checkpoint = torch.load(cloob_weights_path, weights_only=True)
 
             sd = cloob_checkpoint["state_dict"]
 
@@ -398,12 +398,17 @@ class DatasetLoader:
             Dictionary containing train and validation data loaders
         """
         try:
-            # This would need to be implemented based on genQC's dataloader structure
+            # Filter kwargs to only pass arguments the dataset's get_dataloaders accepts
+            import inspect
+            sig = inspect.signature(dataset.get_dataloaders)
+            valid_params = set(sig.parameters.keys())
+            filtered_kwargs = {k: v for k, v in kwargs.items() if k in valid_params}
+
             dataloaders = dataset.get_dataloaders(
                 batch_size=batch_size,
                 p_valid=split_ratio,
                 text_encoder=self.text_encoder,
-                **kwargs,
+                **filtered_kwargs,
             )
             
             self.logger.info(f"Created dataloaders with batch size {batch_size}")

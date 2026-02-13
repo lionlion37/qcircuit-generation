@@ -11,13 +11,14 @@ from ..imports import *
 from .config_model import ConfigModel
 from ..utils.async_fn import run_parallel_jobs
 from ..utils.misc_utils import infer_torch_device
+from typing import Optional
 import open_clip
 
 # %% ../../src/training/frozen_open_clip.ipynb 5
 @dataclass
 class FrozenOpenCLIPEmbedderConfig:
     arch: str
-    version: str
+    version: Optional[str]
     #device: str
     max_length: int
     freeze: bool
@@ -35,13 +36,14 @@ class FrozenOpenCLIPEmbedder(ConfigModel):
 
     njobs = 1  # TODO: check how to do this with config
 
-    def __init__(self, arch="ViT-B-32", version="datacomp_xl_s13b_b90k", max_length=77, freeze=True, layer="penultimate", **kwargs):
-        super().__init__()        
-        
-        assert layer in self.LAYERS     
+    def __init__(self, arch="ViT-B-32", version="datacomp_xl_s13b_b90k", max_length=77, freeze=True, layer="penultimate", local_weights_path=None, **kwargs):
+        super().__init__()
+
+        assert layer in self.LAYERS
         self.params_config = FrozenOpenCLIPEmbedderConfig(arch, version, max_length, freeze, layer)
-        # TODO: try pushing to cuda and find out why the device is hardcoded here
-        model, _, _ = open_clip.create_model_and_transforms(arch, device="cpu", pretrained=version)
+        # Use local weights path if provided, otherwise fall back to version (downloads from HuggingFace)
+        pretrained = local_weights_path if local_weights_path else version
+        model, _, _ = open_clip.create_model_and_transforms(arch, device="cpu", pretrained=pretrained)
         self.device = "cpu"
         
         del model.visual     
@@ -148,8 +150,8 @@ class CachedFrozenOpenCLIPEmbedderConfig(FrozenOpenCLIPEmbedderConfig):
 class CachedFrozenOpenCLIPEmbedder(FrozenOpenCLIPEmbedder):
     """Adds caching support to `FrozenOpenCLIPEmbedder`."""
 
-    def __init__(self, arch="ViT-B-32", version="datacomp_xl_s13b_b90k", max_length=77, freeze=True, layer="penultimate", enable_cache_token_limit: bool = True, **kwargs):
-        super().__init__(arch=arch, version=version, max_length=max_length, freeze=freeze, layer=layer, **kwargs)  
+    def __init__(self, arch="ViT-B-32", version="datacomp_xl_s13b_b90k", max_length=77, freeze=True, layer="penultimate", enable_cache_token_limit: bool = True, local_weights_path=None, **kwargs):
+        super().__init__(arch=arch, version=version, max_length=max_length, freeze=freeze, layer=layer, local_weights_path=local_weights_path, **kwargs)
         self.enable_cache_token_limit = enable_cache_token_limit
 
         self.params_config = CachedFrozenOpenCLIPEmbedderConfig(arch, version, max_length, freeze, layer, enable_cache_token_limit)

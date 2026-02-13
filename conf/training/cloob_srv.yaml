@@ -45,12 +45,13 @@ text_encoder:
   type: CachedFrozenOpenCLIPEmbedder
   params:
     arch: RN50x4
-    version: null #./models/encoders/RN50.pt # openai
+    version: null
     max_length: 77
     freeze: true
     layer: penultimate
     enable_cache_token_limit: true
-    local_weights_path: "./models/encoders/clip_rn50x4_yfcc_epoch_28.pt"
+    local_weights_path: null
+    cloob_weights_path: "./models/encoders/clip_rn50x4_yfcc_epoch_28.pt"
 
 scheduler:
   type: DDIMScheduler

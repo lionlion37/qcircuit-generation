@@ -1,0 +1,67 @@
+# Training config reproducing the paper: "Quantum circuit synthesis with diffusion models"
+# (arxiv:2311.02041, Fürrutter et al., Nature Machine Intelligence 2024)
+# Architecture and hyperparameters match the published HuggingFace model: Floki00/qc_srv_3to8qubit
+
+general:
+  output_path: ./models/trained/
+  model_name: paper_srv_model
+  experiment_name: paper_srv_reproduction
+  dataset: ./datasets/paper_quditkit  # srv_3q through srv_8q combined
+  njobs: 8
+  device: auto
+  resume: false
+  verbose: true
+
+model:
+  type: QC_Cond_UNet
+  save_type: pt
+  params:
+    model_features: [128, 128, 256]
+    clr_dim: 4            # d = N+2 = 4 for gate pool ['h', 'cx']
+    num_clrs: 4           # overridden by setup_model to len(gate_pool)+2
+    t_emb_size: 256
+    cond_emb_size: 512
+    num_heads: [8, 8, 2]
+    num_res_blocks: [2, 2, 4]
+    transformer_depths: [1, 2, 1]
+
+training:
+  learning_rate: 3e-4
+  optimizer: Adam
+  loss: MSELoss
+  num_epochs: 75
+  batch_size: 256
+  enable_guidance_train: true
+  guidance_train_p: 0.1
+  cached_text_enc: true
+  output_path: ./models/trained/
+  model_name: paper_srv_model
+  experiment_name: paper_srv_reproduction
+  ckpt_path: ./cp_saves/
+  ckpt_interval: 1
+  wandb:
+    enable: false
+    project: qcircuit-generation
+    run_name: paper_srv_reproduction
+
+text_encoder:
+  type: CachedFrozenOpenCLIPEmbedder
+  params:
+    arch: ViT-B-32
+    version: null  # set to null to avoid downloading from HuggingFace
+    max_length: 77
+    freeze: true
+    layer: penultimate
+    enable_cache_token_limit: true
+    local_weights_path: "./models/encoders/open_clip_ViT-B-32_laion2b_s34b_b79k.bin"
+
+scheduler:
+  type: DDIMScheduler
+  params:
+    num_train_timesteps: 1000
+    beta_start: 0.0001
+    beta_end: 0.02
+    beta_schedule: cos_alpha
+    input_perturbation: 0.1
+    prediction_type: epsilon
+    eta: 1
