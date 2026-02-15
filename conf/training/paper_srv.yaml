@@ -6,7 +6,7 @@ general:
   output_path: ./models/trained/
   model_name: paper_srv_model
   experiment_name: paper_srv_reproduction
-  dataset: ./datasets/paper_quditkit  # srv_3q through srv_8q combined
+  dataset: ./datasets/qc_srv_dataset_3to8qubit  # srv_3q through srv_8q combined
   njobs: 8
   device: auto
   resume: false

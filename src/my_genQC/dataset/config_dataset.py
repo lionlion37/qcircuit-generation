@@ -196,8 +196,8 @@ class ConfigDataset():
             valid_loader = DataLoader(dataset=ds_valid, batch_size=batch_size, shuffle=True)
 
         else:              
-            train_loader = DataLoader(dataset=ds      , batch_size=batch_size, shuffle=True, pin_memory=True, num_workers=12)
-            valid_loader = DataLoader(dataset=ds_valid, batch_size=batch_size, shuffle=True, pin_memory=True, num_workers=12)
+            train_loader = DataLoader(dataset=ds      , batch_size=batch_size, shuffle=True, pin_memory=False, num_workers=0)
+            valid_loader = DataLoader(dataset=ds_valid, batch_size=batch_size, shuffle=True, pin_memory=False, num_workers=0)
 
         self.dataloaders = DataLoaders(train_loader, valid_loader)        
         return self.dataloaders

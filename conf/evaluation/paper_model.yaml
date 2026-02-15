@@ -1,0 +1,18 @@
+dataset: ./datasets/qc_srv_dataset_3to8qubit # srv_dataset
+model_dir: ./models/trained/paper_srv_model
+hf_repo: null 
+num_samples: 5000 # 999999
+# max_gates: 16
+backend: quditkit
+save_output: false # true
+save_folder: ./scripts/inference/
+
+model_params:
+  guidance_scale: 1.5
+  sample_steps: 20
+  auto_batch_size: 1024 # 4086
+
+wandb:
+  enable: false
+  project: qcircuit-generation
+  run_name: 8q_remote_model_evaluation
