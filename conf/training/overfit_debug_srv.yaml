@@ -1,0 +1,63 @@
+general:
+  output_path: ./models/trained/
+  model_name: overfit_debug_srv_model
+  experiment_name: overfit_debug_srv
+  dataset: ./datasets/paper_quditkit/srv_3q_dataset
+  njobs: 4
+  device: auto
+  resume: false
+  verbose: true
+
+model:
+  type: QC_Cond_UNet
+  save_type: pt
+  params:
+    model_features: [128, 128, 256]
+    clr_dim: 4
+    num_clrs: 4
+    t_emb_size: 256
+    cond_emb_size: 512
+    num_heads: [8, 8, 2]
+    num_res_blocks: [2, 2, 4]
+    transformer_depths: [1, 2, 1]
+
+training:
+  learning_rate: 1e-3
+  optimizer: Adam
+  loss: MSELoss
+  num_epochs: 100
+  batch_size: 64
+  max_samples: 512
+  enable_guidance_train: false
+  guidance_train_p: 0.0
+  cached_text_enc: true
+  output_path: ./models/trained/
+  model_name: overfit_debug_srv_model
+  experiment_name: overfit_debug_srv
+  ckpt_path: ./cp_saves/
+  ckpt_interval: 10
+  wandb:
+    enable: true
+    project: qcircuit-generation
+    run_name: overfit_debug_srv
+
+text_encoder:
+  type: CachedFrozenOpenCLIPEmbedder
+  params:
+    arch: ViT-B-32
+    version: laion2b_s34b_b79k
+    max_length: 77
+    freeze: true
+    layer: penultimate
+    enable_cache_token_limit: true
+
+scheduler:
+  type: DDIMScheduler
+  params:
+    num_train_timesteps: 1000
+    beta_start: 0.0001
+    beta_end: 0.02
+    beta_schedule: cos_alpha
+    input_perturbation: 0.1
+    prediction_type: epsilon
+    eta: 1
