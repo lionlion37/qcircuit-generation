@@ -168,6 +168,12 @@ class DiffusionTrainer:
                 guidance_train_p=training_config.get("guidance_train_p", 0.1),
                 cached_text_enc=training_config.get("cached_text_enc", True),
             )
+            self.logger.info(
+                f"model.emb_clr.requires_grad={self.pipeline.model.emb_clr.weight.requires_grad}"
+            )
+            self.logger.info(
+                f"embedder.emb_clr.requires_grad={self.pipeline.embedder.emb_clr.weight.requires_grad}"
+            )
 
             self.logger.info("Model setup completed successfully")
 
