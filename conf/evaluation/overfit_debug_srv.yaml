@@ -1,0 +1,17 @@
+dataset: ./datasets/paper_quditkit/srv_3q_dataset
+model_dir: ./models/trained/overfit_debug_srv_model
+hf_repo: null
+num_samples: 256
+backend: quditkit
+save_output: false
+save_folder: ./inference/
+
+model_params:
+  guidance_scale: 10.0
+  sample_steps: 20
+  auto_batch_size: 256
+
+wandb:
+  enable: true
+  project: qcircuit-generation
+  run_name: overfit_debug_srv_eval
