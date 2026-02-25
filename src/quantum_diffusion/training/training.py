@@ -36,6 +36,8 @@ class WandbLoggingCallback(Callback):
         if not self.run or not hasattr(pipeline, "out_metric_dict"):
             return
         metrics = {k: float(v) for k, v in pipeline.out_metric_dict.items()}
+        if hasattr(pipeline, "_train_epoch_stats"):
+            metrics.update({k: float(v) for k, v in pipeline._train_epoch_stats.items()})
         metrics["epoch"] = pipeline.epoch + 1
         self.run.log(metrics, step=pipeline.epoch + 1)
 

@@ -141,6 +141,39 @@ class Pipeline(PipelineIO):
                     g['lr'] = lr
                     for k,v in kwargs.items(): g[k] = v                  
             else: self._reset_opt(lr, **kwargs)
+
+    def _compute_weight_norm(self):
+        sq_sum = torch.zeros((), device=self.device, dtype=torch.float32)
+        for p in self.model.parameters():
+            sq_sum = sq_sum + torch.sum(p.detach().float().pow(2))
+        return torch.sqrt(sq_sum)
+
+    def _compute_grad_norm(self):
+        sq_sum = torch.zeros((), device=self.device, dtype=torch.float32)
+        has_grad = False
+        for p in self.model.parameters():
+            if p.grad is None:
+                continue
+            has_grad = True
+            sq_sum = sq_sum + torch.sum(p.grad.detach().float().pow(2))
+        if not has_grad:
+            return torch.zeros((), device=self.device, dtype=torch.float32)
+        return torch.sqrt(sq_sum)
+
+    def _compute_grad_norm_emb_clr(self):
+        sq_sum = torch.zeros((), device=self.device, dtype=torch.float32)
+        has_grad = False
+
+        for trainable in self.trainables:
+            for name, p in trainable.named_parameters():
+                if name != "emb_clr.weight" or p.grad is None:
+                    continue
+                has_grad = True
+                sq_sum = sq_sum + torch.sum(p.grad.detach().float().pow(2))
+
+        if not has_grad:
+            return torch.zeros((), device=self.device, dtype=torch.float32)
+        return torch.sqrt(sq_sum)
          
     #------------------------------------
 
@@ -153,6 +186,12 @@ class Pipeline(PipelineIO):
 
             #backprob
             loss.backward()
+
+            self.last_train_stats = {
+                "weight_norm": self._compute_weight_norm().item(),
+                "grad_norm": self._compute_grad_norm().item(),
+                "grad_norm_emb_clr": self._compute_grad_norm_emb_clr().item(),
+            }
 
             # torch.nn.utils.clip_grad_norm_(self.model.parameters(), 1)
             
@@ -167,6 +206,8 @@ class Pipeline(PipelineIO):
             model.train(train)
         
         mode = "" if train else "_valid"
+        train_stat_sums = {}
+        train_stat_cnt = 0
 
         with self.progress_bar(total=len(data_loader), epoch=self.epoch, unit=" batch") as batch_prgb:                   
             for self.batch, data in enumerate(data_loader):    
@@ -177,11 +218,21 @@ class Pipeline(PipelineIO):
                 if train:
                     self.fit_losses.append(loss.item())                
                     if self.lr_sched: self.lr_sched.step()
+                    if hasattr(self, "last_train_stats"):
+                        for k, v in self.last_train_stats.items():
+                            train_stat_sums[k] = train_stat_sums.get(k, 0.0) + float(v)
+                        train_stat_cnt += 1
                 
                 #pack up metrics
                 self.out_metric_dict = {m.name:m.result().tolist() for m in self.metrics.values() if not m.empty}               
+                if train and train_stat_cnt > 0:
+                    self._train_epoch_stats = {k: v / train_stat_cnt for k, v in train_stat_sums.items()}
+                    self.out_metric_dict |= self._train_epoch_stats
                 self.end_batch_metrics(batch_prgb, **self.out_metric_dict)   
                 # run_cbs(self.cbs, "after_batch", self) # e.g. if max-number of batches is needed
+
+        if train and train_stat_cnt > 0:
+            self._train_epoch_stats = {k: v / train_stat_cnt for k, v in train_stat_sums.items()}
                 
     #run on train and one on valid
     def fit(self, num_epochs: int, data_loaders: DataLoaders, lr: float=None, lr_sched=None, log_summary=True, ckpt_interval=None, ckpt_path=None):
