@@ -1,7 +1,0 @@
-gate_set: ['h', 'cx', 'cz', 's', 'x', 'y', 'z']
-num_qubits: 4
-num_samples: 2000
-min_gates: 3
-max_gates: 20
-condition_type: SRV
-output_path: ./datasets/clifford_4q_srv
