@@ -51,7 +51,15 @@ def main(cfg):
 
         # Create data loaders
         batch_size = cfg.training.batch_size or 32
-        dataloaders = dataset_loader.get_dataloaders(dataset, batch_size=batch_size, text_encoder_njobs=cfg.general.njobs)
+        dataloader_kwargs = {"text_encoder_njobs": cfg.general.njobs}
+        if "max_samples" in cfg.training and cfg.training.max_samples:
+            dataloader_kwargs["max_samples"] = int(cfg.training.max_samples)
+
+        dataloaders = dataset_loader.get_dataloaders(
+            dataset,
+            batch_size=batch_size,
+            **dataloader_kwargs,
+        )
         
         # Initialize trainer
         trainer = DiffusionTrainer(config=cfg, device=device)
