@@ -28,8 +28,8 @@ training:
   num_epochs: 100
   batch_size: 64
   max_samples: 512
-  enable_guidance_train: false
-  guidance_train_p: 0.0
+  enable_guidance_train: true
+  guidance_train_p: 0.1
   cached_text_enc: true
   output_path: ./models/trained/
   model_name: overfit_debug_srv_model
