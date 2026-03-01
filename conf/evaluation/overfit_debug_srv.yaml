@@ -12,6 +12,6 @@ model_params:
   auto_batch_size: 128
 
 wandb:
-  enable: true
+  enable: false
   project: qcircuit-generation
   run_name: overfit_debug_srv_eval

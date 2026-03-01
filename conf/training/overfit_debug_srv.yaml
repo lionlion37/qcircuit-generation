@@ -37,7 +37,7 @@ training:
   ckpt_path: ./cp_saves/
   ckpt_interval: 10
   wandb:
-    enable: true
+    enable: false
     project: qcircuit-generation
     run_name: overfit_debug_srv
 
