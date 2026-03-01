@@ -1,0 +1,27 @@
+wandb: [wandb.login()] Loaded credentials for https://api.wandb.ai from /root/.netrc.
+wandb: Currently logged in as: liondungl (lions-team) to https://api.wandb.ai. Use `wandb login --relogin` to force relogin
+wandb: setting up run 1xddgrhc
+wandb: Tracking run with wandb version 0.25.0
+wandb: Run data is saved locally in /workspace/qcircuit-generation/wandb/run-20260226_125507-1xddgrhc
+wandb: Run `wandb offline` to turn off syncing.
+wandb: Syncing run overfit_debug_srv_eval
+wandb: ⭐️ View project at https://wandb.ai/lions-team/qcircuit-generation
+wandb: 🚀 View run at https://wandb.ai/lions-team/qcircuit-generation/runs/1xddgrhc
+Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+
+  0%|          | 0/50 [00:00<?, ?it/s]
+  2%|▏         | 1/50 [00:00<00:16,  3.05it/s]
+ 18%|█▊        | 9/50 [00:00<00:01, 25.52it/s]
+ 34%|███▍      | 17/50 [00:00<00:00, 40.42it/s]
+ 48%|████▊     | 24/50 [00:00<00:00, 48.89it/s]
+ 64%|██████▍   | 32/50 [00:00<00:00, 56.34it/s]
+ 78%|███████▊  | 39/50 [00:00<00:00, 59.95it/s]
+ 92%|█████████▏| 46/50 [00:00<00:00, 62.63it/s]
+100%|██████████| 50/50 [00:01<00:00, 48.89it/s]
+Error executing job with overrides: ['evaluation=overfit_debug_srv', 'evaluation.model_dir=/workspace/qcircuit-generation/models/trained/exp_a_lr3e4_s512_e100_ip0p0_20260226_124801', 'evaluation.num_samples=128', 'evaluation.model_params.guidance_scale=1.5']
+Traceback (most recent call last):
+  File "/workspace/qcircuit-generation/scripts/evaluate_model.py", line 254, in main
+    raise RuntimeError("Decoding failed for all samples; cannot compute metrics.")
+RuntimeError: Decoding failed for all samples; cannot compute metrics.
+
+Set the environment variable HYDRA_FULL_ERROR=1 for a complete stack trace.

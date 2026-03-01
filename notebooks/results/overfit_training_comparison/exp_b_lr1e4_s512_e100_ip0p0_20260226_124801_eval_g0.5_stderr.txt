@@ -1,0 +1,18 @@
+wandb: [wandb.login()] Loaded credentials for https://api.wandb.ai from /root/.netrc.
+wandb: Currently logged in as: liondungl (lions-team) to https://api.wandb.ai. Use `wandb login --relogin` to force relogin
+wandb: Tracking run with wandb version 0.25.0
+wandb: Run data is saved locally in /workspace/qcircuit-generation/wandb/run-20260226_125838-690sc0mn
+wandb: Run `wandb offline` to turn off syncing.
+wandb: Syncing run overfit_debug_srv_eval
+wandb: ⭐️ View project at https://wandb.ai/lions-team/qcircuit-generation
+wandb: 🚀 View run at https://wandb.ai/lions-team/qcircuit-generation/runs/690sc0mn
+
+  0%|          | 0/50 [00:00<?, ?it/s]
+  2%|▏         | 1/50 [00:00<00:16,  2.99it/s]
+ 18%|█▊        | 9/50 [00:00<00:01, 25.77it/s]
+ 34%|███▍      | 17/50 [00:00<00:00, 41.45it/s]
+ 50%|█████     | 25/50 [00:00<00:00, 52.30it/s]
+ 66%|██████▌   | 33/50 [00:00<00:00, 59.62it/s]
+ 82%|████████▏ | 41/50 [00:00<00:00, 65.22it/s]
+ 98%|█████████▊| 49/50 [00:00<00:00, 69.14it/s]
+100%|██████████| 50/50 [00:00<00:00, 51.65it/s]

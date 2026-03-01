@@ -1,0 +1,36 @@
+Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+
+  0%|          | 0/1 [00:00<?, ?it/s]
+100%|██████████| 1/1 [00:00<00:00, 18.51it/s]
+Error executing job with overrides: ['training=overfit_debug_srv', 'training.general.model_name=exp_b_lr1e4_s512_e200_ip0p0_20260227_134452', 'training.general.experiment_name=exp_b_lr1e4_s512_e200_ip0p0_20260227_134452', 'training.training.learning_rate=1e-4', 'training.training.max_samples=512', 'training.training.num_epochs=200', 'training.training.batch_size=32', 'training.scheduler.params.input_perturbation=0.0', 'training.training.enable_guidance_train=true', 'training.training.guidance_train_p=0.1']
+Traceback (most recent call last):
+  File "/workspace/qcircuit-generation/scripts/train_model.py", line 142, in main
+    raise e
+  File "/workspace/qcircuit-generation/scripts/train_model.py", line 95, in main
+    history = trainer.train(dataloaders, save_path=cfg.general.output_path)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/workspace/qcircuit-generation/src/quantum_diffusion/training/training.py", line 243, in train
+    self.wandb_run = self._setup_wandb()
+                     ^^^^^^^^^^^^^^^^^^^
+  File "/workspace/qcircuit-generation/src/quantum_diffusion/training/training.py", line 225, in _setup_wandb
+    return wandb.init(project=project, name=run_name, config=dict(self.config))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.11/dist-packages/wandb/sdk/wandb_init.py", line 1595, in init
+    get_sentry().reraise(e)
+  File "/usr/local/lib/python3.11/dist-packages/wandb/analytics/sentry.py", line 190, in reraise
+    raise exc.with_traceback(tb)
+  File "/usr/local/lib/python3.11/dist-packages/wandb/sdk/wandb_init.py", line 1516, in init
+    wi.maybe_login(init_settings)
+  File "/usr/local/lib/python3.11/dist-packages/wandb/sdk/wandb_init.py", line 193, in maybe_login
+    wandb_login._login(
+  File "/usr/local/lib/python3.11/dist-packages/wandb/sdk/wandb_login.py", line 190, in _login
+    auth = _find_or_prompt_for_key(
+           ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.11/dist-packages/wandb/sdk/wandb_login.py", line 266, in _find_or_prompt_for_key
+    auth = wbauth.authenticate_session(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.11/dist-packages/wandb/sdk/lib/wbauth/authenticate.py", line 139, in authenticate_session
+    raise UsageError(
+wandb.errors.errors.UsageError: No API key configured. Use `wandb login` to log in.
+
+Set the environment variable HYDRA_FULL_ERROR=1 for a complete stack trace.

@@ -1,0 +1,60 @@
+my_genQC: /workspace/qcircuit-generation/src/my_genQC/__init__.py
+[INFO]: Cuda device has a capability of 8.9 (>= 8), allowing tf32 matmul.
+2026-02-27 13:45:58 - __main__ - INFO - Loading dataset from ./datasets/paper_quditkit/srv_3q_dataset
+2026-02-27 13:45:58 - quantum_diffusion.data.dataset - INFO - Detected preprocessed dataset. Loading directly...
+[INFO]: Loading tensor from `./datasets/paper_quditkit/srv_3q_dataset/dataset/ds_x.safetensors` onto device: cuda.
+[INFO]: Loading tensor from `./datasets/paper_quditkit/srv_3q_dataset/dataset/ds_y.safetensors` onto device: cuda.
+[INFO]: Instantiated config_dataset from given config on cuda.
+[WARNING]: The value 0 is reserved for background tokens, i.e. qubit time position which are not effected by gates.
+[WARNING]: Automatically incrementing all vocabulary values by one ...
+[2026-02-27 13:46:00,890][root][INFO] - Parsing model identifier. Schema: None, Identifier: ViT-B-32
+[2026-02-27 13:46:00,893][root][INFO] - Loaded built-in ViT-B-32 model config.
+[2026-02-27 13:46:01,166][httpx][INFO] - HTTP Request: HEAD https://huggingface.co/laion/CLIP-ViT-B-32-laion2B-s34B-b79K/resolve/main/open_clip_model.safetensors "HTTP/1.1 302 Found"
+[2026-02-27 13:46:01,168][huggingface_hub.utils._http][WARNING] - Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+[2026-02-27 13:46:01,171][root][INFO] - Instantiating model architecture: CLIP
+[2026-02-27 13:46:02,640][root][INFO] - Loading full pretrained weights from: /root/.cache/huggingface/hub/models--laion--CLIP-ViT-B-32-laion2B-s34B-b79K/snapshots/1a25a446712ba5ee05982a381eed697ef9b435cf/open_clip_model.safetensors
+[2026-02-27 13:46:02,783][root][INFO] - Final image preprocessing configuration set: {'size': (224, 224), 'mode': 'RGB', 'mean': (0.48145466, 0.4578275, 0.40821073), 'std': (0.26862954, 0.26130258, 0.27577711), 'interpolation': 'bicubic', 'resize_mode': 'shortest', 'fill_color': 0}
+[2026-02-27 13:46:02,784][root][INFO] - Model ViT-B-32 creation process complete.
+[2026-02-27 13:46:02,785][root][INFO] - Parsing tokenizer identifier. Schema: None, Identifier: ViT-B-32
+[2026-02-27 13:46:02,786][root][INFO] - Attempting to load config from built-in: ViT-B-32
+[2026-02-27 13:46:02,786][root][INFO] - Using default SimpleTokenizer.
+[INFO]: `my_genQC.models.frozen_open_clip.CachedFrozenOpenCLIPEmbedder` instantiated from given `config` on cuda.
+[INFO]: `my_genQC.models.frozen_open_clip.CachedFrozenOpenCLIPEmbedder`. Found no key `save_type` in `config`. No state dict loaded.
+[INFO]: `my_genQC.models.frozen_open_clip.CachedFrozenOpenCLIPEmbedder`. Freeze model: True
+2026-02-27 13:46:02 - quantum_diffusion.data.dataset - INFO - Dataset loaded from ./datasets/paper_quditkit/srv_3q_dataset
+[INFO]: Not balancing dataset!  balance_max=None
+[INFO]: Generate cache: converting tensors to str and tokenize
+ - to str list
+ - tokenize_and_push_to_device
+Tokenizing with 1 job(s)
+ - generate_cache
+[INFO]: - `generate_cache` infered a TOKEN limit of 13
+[INFO]: caching trying to allocate memory (6, 77, 512) on cuda, approx. 0.001 GB
+[INFO]: Generated cache, y_ptrs.shape=torch.Size([1024])
+2026-02-27 13:46:03 - quantum_diffusion.data.dataset - INFO - Created dataloaders with batch size 64
+2026-02-27 13:46:03 - __main__ - INFO - Training configuration: {'general': {'output_path': './models/trained/', 'model_name': 'exp_c_lr3e4_s1024_e200_ip0p0_20260227_134452', 'experiment_name': 'exp_c_lr3e4_s1024_e200_ip0p0_20260227_134452', 'dataset': './datasets/paper_quditkit/srv_3q_dataset', 'njobs': 4, 'device': 'auto', 'resume': False, 'verbose': True}, 'model': {'type': 'QC_Cond_UNet', 'save_type': 'pt', 'params': {'model_features': [128, 128, 256], 'clr_dim': 4, 'num_clrs': 4, 't_emb_size': 256, 'cond_emb_size': 512, 'num_heads': [8, 8, 2], 'num_res_blocks': [2, 2, 4], 'transformer_depths': [1, 2, 1]}}, 'training': {'learning_rate': 0.0003, 'optimizer': 'Adam', 'loss': 'MSELoss', 'num_epochs': 80, 'batch_size': 64, 'max_samples': 1024, 'enable_guidance_train': True, 'guidance_train_p': 0.1, 'cached_text_enc': True, 'output_path': './models/trained/', 'model_name': 'overfit_debug_srv_model', 'experiment_name': 'overfit_debug_srv', 'ckpt_path': './cp_saves/', 'ckpt_interval': 10, 'wandb': {'enable': True, 'project': 'qcircuit-generation', 'run_name': 'overfit_debug_srv'}}, 'text_encoder': {'type': 'CachedFrozenOpenCLIPEmbedder', 'params': {'arch': 'ViT-B-32', 'version': 'laion2b_s34b_b79k', 'max_length': 77, 'freeze': True, 'layer': 'penultimate', 'enable_cache_token_limit': True}}, 'scheduler': {'type': 'DDIMScheduler', 'params': {'num_train_timesteps': 1000, 'beta_start': 0.0001, 'beta_end': 0.02, 'beta_schedule': 'cos_alpha', 'input_perturbation': 0.0, 'prediction_type': 'epsilon', 'eta': 1}}}
+2026-02-27 13:46:03 - experiment.exp_c_lr3e4_s1024_e200_ip0p0_20260227_134452 - INFO - Starting experiment: exp_c_lr3e4_s1024_e200_ip0p0_20260227_134452
+2026-02-27 13:46:03 - experiment.exp_c_lr3e4_s1024_e200_ip0p0_20260227_134452 - INFO - Configuration: {'general': {'output_path': './models/trained/', 'model_name': 'exp_c_lr3e4_s1024_e200_ip0p0_20260227_134452', 'experiment_name': 'exp_c_lr3e4_s1024_e200_ip0p0_20260227_134452', 'dataset': './datasets/paper_quditkit/srv_3q_dataset', 'njobs': 4, 'device': 'auto', 'resume': False, 'verbose': True}, 'model': {'type': 'QC_Cond_UNet', 'save_type': 'pt', 'params': {'model_features': [128, 128, 256], 'clr_dim': 4, 'num_clrs': 4, 't_emb_size': 256, 'cond_emb_size': 512, 'num_heads': [8, 8, 2], 'num_res_blocks': [2, 2, 4], 'transformer_depths': [1, 2, 1]}}, 'training': {'learning_rate': 0.0003, 'optimizer': 'Adam', 'loss': 'MSELoss', 'num_epochs': 80, 'batch_size': 64, 'max_samples': 1024, 'enable_guidance_train': True, 'guidance_train_p': 0.1, 'cached_text_enc': True, 'output_path': './models/trained/', 'model_name': 'overfit_debug_srv_model', 'experiment_name': 'overfit_debug_srv', 'ckpt_path': './cp_saves/', 'ckpt_interval': 10, 'wandb': {'enable': True, 'project': 'qcircuit-generation', 'run_name': 'overfit_debug_srv'}}, 'text_encoder': {'type': 'CachedFrozenOpenCLIPEmbedder', 'params': {'arch': 'ViT-B-32', 'version': 'laion2b_s34b_b79k', 'max_length': 77, 'freeze': True, 'layer': 'penultimate', 'enable_cache_token_limit': True}}, 'scheduler': {'type': 'DDIMScheduler', 'params': {'num_train_timesteps': 1000, 'beta_start': 0.0001, 'beta_end': 0.02, 'beta_schedule': 'cos_alpha', 'input_perturbation': 0.0, 'prediction_type': 'epsilon', 'eta': 1}}}
+2026-02-27 13:46:03 - __main__ - INFO - Setting up diffusion model...
+2026-02-27 13:46:03 - experiment.exp_c_lr3e4_s1024_e200_ip0p0_20260227_134452 - INFO - [setup] Initializing model architecture
+2026-02-27 13:46:03 - quantum_diffusion.training.training - INFO - Setting up diffusion model...
+[WARNING]: The value 0 is reserved for background tokens, i.e. qubit time position which are not effected by gates.
+[WARNING]: Automatically incrementing all vocabulary values by one ...
+[INFO]: `genQC.models.unet_qc.QC_Cond_UNet` instantiated from given `config` on cuda.
+[INFO]: `genQC.models.unet_qc.QC_Cond_UNet`. No `save_path` provided. Found no key `save_path` in `config`. No state dict loaded.
+[INFO]: `genQC.models.unet_qc.QC_Cond_UNet`. Freeze model: False
+[INFO]: `genQC.models.unet_qc.QC_Cond_UNet` instantiated from given `config` on cuda.
+[INFO]: `genQC.models.unet_qc.QC_Cond_UNet`. No `save_path` provided. Found no key `save_path` in `config`. No state dict loaded.
+[INFO]: `genQC.models.unet_qc.QC_Cond_UNet`. Freeze model: True
+2026-02-27 13:46:03 - quantum_diffusion.training.training - INFO - model.emb_clr.requires_grad=True
+2026-02-27 13:46:03 - quantum_diffusion.training.training - INFO - embedder.emb_clr.requires_grad=False
+2026-02-27 13:46:03 - quantum_diffusion.training.training - INFO - Model setup completed successfully
+2026-02-27 13:46:03 - __main__ - INFO - Compiling model for training...
+2026-02-27 13:46:03 - experiment.exp_c_lr3e4_s1024_e200_ip0p0_20260227_134452 - INFO - [setup] Compiling model with optimizer and loss function
+2026-02-27 13:46:03 - quantum_diffusion.training.training - INFO - Model compiled for training
+2026-02-27 13:46:03 - __main__ - INFO - Starting model training...
+2026-02-27 13:46:03 - experiment.exp_c_lr3e4_s1024_e200_ip0p0_20260227_134452 - INFO - [training] Beginning training loop
+2026-02-27 13:46:03 - quantum_diffusion.training.training - INFO - Starting training for 80 epochs...
+2026-02-27 13:46:04 - quantum_diffusion.training.training - ERROR - Error during training: No API key configured. Use `wandb login` to log in.
+2026-02-27 13:46:04 - __main__ - ERROR - Training failed: No API key configured. Use `wandb login` to log in.
+2026-02-27 13:46:04 - experiment.exp_c_lr3e4_s1024_e200_ip0p0_20260227_134452 - INFO - Experiment 'exp_c_lr3e4_s1024_e200_ip0p0_20260227_134452' completed in 1.08 seconds
