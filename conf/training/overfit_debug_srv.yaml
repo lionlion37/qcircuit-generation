@@ -26,8 +26,8 @@ training:
   optimizer: Adam
   loss: MSELoss
   num_epochs: 200
-  batch_size: 32
-  max_samples: 128
+  batch_size: 256
+  max_samples: 2048
   enable_guidance_train: true
   guidance_train_p: 0.1
   cached_text_enc: true
@@ -58,6 +58,6 @@ scheduler:
     beta_start: 0.0001
     beta_end: 0.02
     beta_schedule: cos_alpha
-    input_perturbation: 0.0
+    input_perturbation: 0.1
     prediction_type: epsilon
     eta: 1

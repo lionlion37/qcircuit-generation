@@ -1,14 +1,14 @@
 dataset: ./datasets/paper_quditkit/srv_3q_dataset
 model_dir: ./models/trained/overfit_debug_srv_model
 hf_repo: null
-num_samples: 128
+num_samples: 1024
 backend: quditkit
 save_output: false
 save_folder: ./inference/
 
 model_params:
-  guidance_scale: 10.0
-  sample_steps: 50
+  guidance_scale: 7.5
+  sample_steps: 20
   auto_batch_size: 128
 
 wandb:
