@@ -37,10 +37,10 @@ training:
   output_path: ./models/trained/
   model_name: paper_srv_model
   experiment_name: paper_srv_reproduction
-  ckpt_path: ./cp_saves/
-  ckpt_interval: 1
+  ckpt_path: ./models/cp_saves/
+  ckpt_interval: 5
   wandb:
-    enable: false
+    enable: true
     project: qcircuit-generation
     run_name: paper_srv_reproduction
 
