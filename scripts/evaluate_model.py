@@ -21,7 +21,11 @@ sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
 from my_genQC.inference.eval_metrics import UnitaryFrobeniusNorm, UnitaryInfidelityNorm
 from my_genQC.inference.evaluation_helper import get_unitaries, get_srvs
-from my_genQC.inference.sampling import generate_compilation_tensors, generate_tensors, decode_tensors_to_backend
+from my_genQC.inference.sampling import (
+    generate_compilation_tensors,
+    generate_tensors,
+    decode_tensors_to_backend,
+)
 from my_genQC.pipeline.diffusion_pipeline import DiffusionPipeline
 from my_genQC.platform.simulation import Simulator, CircuitBackendType
 from my_genQC.platform.tokenizer.circuits_tokenizer import CircuitTokenizer
@@ -74,7 +78,7 @@ def load_dataset(dataset_path: Path, device: torch.device):
     dataset = dataset_cls.from_config_file(
         config_path=config_path,
         device=device,
-        save_path=os.path.join(dataset_path, "dataset", "ds")
+        save_path=os.path.join(dataset_path, "dataset", "ds"),
     )
 
     # logger.info(f"Dataset loaded from {dataset_path}")
@@ -90,12 +94,14 @@ def parse_srv_targets(labels: np.ndarray) -> torch.Tensor:
         end = text.find("]", start)
         if start == -1 or end == -1:
             raise ValueError(f"Could not parse SRV from label: {text}")
-        srv = ast.literal_eval(text[start:end+1])
+        srv = ast.literal_eval(text[start : end + 1])
         srv_list.append(srv)
     return torch.tensor(srv_list, dtype=torch.long)
 
 
-def entanglement_histogram(srvs: torch.Tensor, num_qubits: int) -> tuple[list[float], list[str], float]:
+def entanglement_histogram(
+    srvs: torch.Tensor, num_qubits: int
+) -> tuple[list[float], list[str], float]:
     """Return histogram over entanglement bins defined in genQC."""
     if srvs.numel() == 0:
         return [], [], 0.0
@@ -114,6 +120,7 @@ def entanglement_histogram(srvs: torch.Tensor, num_qubits: int) -> tuple[list[fl
 
 
 def load_pipeline(model_dir: Path | None, repo_id: str | None, device: torch.device):
+    # TODO: does not correctly load text encoder, when local_weights_path is used since that isn't saved!
     if repo_id:
         return DiffusionPipeline.from_pretrained(repo_id=repo_id, device=device)
 
@@ -127,7 +134,9 @@ def load_pipeline(model_dir: Path | None, repo_id: str | None, device: torch.dev
         raise FileNotFoundError(f"Missing pipeline config at {cfg_file}")
 
     # DiffusionPipeline expects a directory string ending with '/'
-    return DiffusionPipeline.from_config_file(config_path=str(config_path) + "/", device=device)
+    return DiffusionPipeline.from_config_file(
+        config_path=str(config_path) + "/", device=device
+    )
 
 
 def to_complex(unitary_tensor: torch.Tensor) -> torch.Tensor:
@@ -171,16 +180,19 @@ def main(cfg):
 
     # ---- W&B: static metadata (log once) ----
     if wandb_run:
-        wandb_run.config.update({
-            "eval/samples": samples,
-            "data/system_size": system_size,
-            "data/max_gates": max_gates,
-            "data/num_qubits": num_qubits,
-            "task/is_compilation": is_compilation,
-            "pipeline/guidance_sample_mode": pipeline.guidance_sample_mode,
-            "pipeline/sample_steps": cfg.model_params.sample_steps,
-            "device": str(device),
-        }, allow_val_change=True)
+        wandb_run.config.update(
+            {
+                "eval/samples": samples,
+                "data/system_size": system_size,
+                "data/max_gates": max_gates,
+                "data/num_qubits": num_qubits,
+                "task/is_compilation": is_compilation,
+                "pipeline/guidance_sample_mode": pipeline.guidance_sample_mode,
+                "pipeline/sample_steps": cfg.model_params.sample_steps,
+                "device": str(device),
+            },
+            allow_val_change=True,
+        )
 
     print("Starting tensor generation...")
 
@@ -222,12 +234,16 @@ def main(cfg):
             if cfg.save_folder:
                 timestamp = datetime.datetime.now().strftime("%D-%T")
                 try:
-                    save_path = os.path.join(cfg.save_folder, f"{num_qubits}q_{samples}_samples.pt")#_{timestamp}.pt")
+                    save_path = os.path.join(
+                        cfg.save_folder, f"{num_qubits}q_{samples}_samples.pt"
+                    )  # _{timestamp}.pt")
                     store_tensor(tensors_out, save_path)
                 except:
                     pass
             else:
-                raise Warning("No save folder specified in config, however save_output is True. Skipping saving.")
+                raise Warning(
+                    "No save folder specified in config, however save_output is True. Skipping saving."
+                )
 
     print("Finished tensor generation.")
 
@@ -280,18 +296,26 @@ def main(cfg):
         frob_metric = UnitaryFrobeniusNorm().distance(predicted, target_complex)
         infid_metric = UnitaryInfidelityNorm().distance(predicted, target_complex)
 
-        print(f"Frobenius  mean/std: {frob_metric.mean().item():.6f} / {frob_metric.std(unbiased=False).item():.6f}")
-        print(f"Infidelity mean/std: {infid_metric.mean().item():.6f} / {infid_metric.std(unbiased=False).item():.6f}")
+        print(
+            f"Frobenius  mean/std: {frob_metric.mean().item():.6f} / {frob_metric.std(unbiased=False).item():.6f}"
+        )
+        print(
+            f"Infidelity mean/std: {infid_metric.mean().item():.6f} / {infid_metric.std(unbiased=False).item():.6f}"
+        )
     else:
         print("No target unitaries in dataset; running SRV evaluation.")
         target_srvs = parse_srv_targets(dataset.y[:samples])[valid_indices]
         predicted_srvs = torch.tensor(
-            get_srvs(simulator, backend_circuits, n_jobs=16),  # TODO: rewrite to use quditkit
+            get_srvs(
+                simulator, backend_circuits, n_jobs=16
+            ),  # TODO: rewrite to use quditkit
             dtype=torch.long,
         )
 
         if target_srvs.shape != predicted_srvs.shape:
-            raise RuntimeError(f"SRV shape mismatch: target {target_srvs.shape} vs predicted {predicted_srvs.shape}")
+            raise RuntimeError(
+                f"SRV shape mismatch: target {target_srvs.shape} vs predicted {predicted_srvs.shape}"
+            )
 
         exact_match = (predicted_srvs == target_srvs).all(dim=1)
         per_qubit = (predicted_srvs == target_srvs).float().mean(dim=0)
@@ -300,10 +324,15 @@ def main(cfg):
         print(f"SRV exact-match rate : {srv_exact_match_rate:.4f}")
 
         qubit_rank_acc = {i: acc for i, acc in enumerate(per_qubit.tolist())}
-        print("Per-qubit rank acc   : " + ", ".join(f"q{i}={acc:.3f}" for i, acc in qubit_rank_acc.items()))
+        print(
+            "Per-qubit rank acc   : "
+            + ", ".join(f"q{i}={acc:.3f}" for i, acc in qubit_rank_acc.items())
+        )
         # print("Per-qubit rank acc   : " + ", ".join(f"q{i}={acc:.3f}" for i, acc in enumerate(per_qubit.tolist())))
 
-        pred_hist, ent_labels, pred_other = entanglement_histogram(predicted_srvs, num_qubits)
+        pred_hist, ent_labels, pred_other = entanglement_histogram(
+            predicted_srvs, num_qubits
+        )
         targ_hist, _, targ_other = entanglement_histogram(target_srvs, num_qubits)
 
         if ent_labels:
