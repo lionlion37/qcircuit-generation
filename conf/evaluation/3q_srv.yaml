@@ -1,0 +1,17 @@
+dataset: ./datasets/paper_qiskit/srv_3q_dataset
+model_dir: ./models/trained/q3_srv_model
+hf_repo: null
+num_samples: 1024
+backend: quditkit
+save_output: false
+save_folder: ./inference/
+
+model_params:
+  guidance_scale: 7.5
+  sample_steps: 20
+  auto_batch_size: 128
+
+wandb:
+  enable: false
+  project: qcircuit-generation
+  run_name: q3_srv_model_eval

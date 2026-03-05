@@ -1,8 +1,8 @@
 general:
   output_path: ./models/trained/
-  model_name: cloob_rn50x4_model 
-  experiment_name: cloob_rn50x4_model_training  # TODO: this is also present below under training
-  dataset: ./datasets/qc_srv_dataset_3to8qubit  # srv_3q through srv_8q combined
+  model_name: q3_srv_model
+  experiment_name: q3_srv_model
+  dataset: ./datasets/paper_qiskit/srv_3q_dataset
   njobs: 8
   device: auto
   resume: false
@@ -25,32 +25,31 @@ training:
   learning_rate: 3e-4
   optimizer: Adam
   loss: MSELoss
-  num_epochs: 75
+  num_epochs: 50
   batch_size: 256
   enable_guidance_train: true
   guidance_train_p: 0.1
   cached_text_enc: true
   output_path: ./models/trained/
-  model_name: paper_srv_model
-  experiment_name: paper_srv_reproduction
-  ckpt_path: ./models/cp_saves/
-  ckpt_interval: 5
+  model_name: q3_srv_model
+  experiment_name: q3_srv_test
+  ckpt_path: ./cp_saves/
+  ckpt_interval: 1
   wandb:
     enable: true
     project: qcircuit-generation
-    run_name: paper_srv_reproduction
+    run_name: q3_srv_test
 
 text_encoder:
   type: CachedFrozenOpenCLIPEmbedder
   params:
-    arch: RN50x4
-    version: null
+    arch: ViT-B-32
+    version: null  # set to null to avoid downloading from HuggingFace
     max_length: 77
     freeze: true
     layer: penultimate
     enable_cache_token_limit: true
-    local_weights_path: null
-    cloob_weights_path: "./models/encoders/clip_rn50x4_yfcc_epoch_28.pt"
+    local_weights_path: "./models/encoders/open_clip_ViT-B-32_laion2b_s34b_b79k.bin"
 
 scheduler:
   type: DDIMScheduler
