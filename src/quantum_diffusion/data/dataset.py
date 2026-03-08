@@ -6,6 +6,7 @@ import sys
 import copy
 import torch
 import numpy as np
+from functools import partial
 from pathlib import Path
 from dataclasses import asdict
 from typing import Dict, List, Optional, Union, Tuple, Any, Iterable
@@ -21,6 +22,7 @@ from my_genQC.platform.simulation import Simulator, CircuitBackendType
 from my_genQC.platform.tokenizer.circuits_tokenizer import CircuitTokenizer
 from my_genQC.models.config_model import ConfigModel
 from my_genQC.dataset import circuits_dataset
+from my_genQC.dataset.balancing import add_balance_fn_quantile_qc_length
 from my_genQC.utils.misc_utils import infer_torch_device
 
 from quantum_diffusion.utils.config import ConfigManager
@@ -109,6 +111,9 @@ class DatasetGenerator:
         backbone: str = "qiskit",
         optimized: bool = True,
         n_jobs: int = 1,
+        balance_after_generation: bool = False,
+        balance_max: Optional[int] = None,
+        balance_quantile: float = 0.25,
         condition_type: Union[
             str, List[str], CircuitConditionType, List[CircuitConditionType]
         ] = "SRV",
@@ -165,19 +170,28 @@ class DatasetGenerator:
                 condition_output.mkdir(parents=True, exist_ok=True)
 
                 self.logger.info(f"Starting circuit generation for {condition_name}...")
+                generation_kwargs = {
+                    "backend": simulator.backend,
+                    "tokenizer": tokenizer,
+                    "condition": condition,
+                    "total_samples": num_samples,
+                    "num_of_qubits": num_qubits,
+                    "min_gates": min_gates,
+                    "max_gates": max_gates,
+                    "optimized": optimized,
+                    "post_randomize_params": False,  # TODO: change when switching to parameterized circuits
+                    "n_jobs": n_jobs,
+                }
+
+                if condition == CircuitConditionType.UNITARY:
+                    generation_kwargs["min_sub_gate_pool_cnt"] = 2
+                    generation_kwargs["max_sub_gate_pool_cnt"] = len(gate_set)
+                else:
+                    generation_kwargs["min_sub_gate_pool_cnt"] = 2
+                    generation_kwargs["fixed_sub_gate_pool"] = gate_set
+
                 tensors, ys, Us, _params = generate_circuit_dataset(
-                    backend=simulator.backend,
-                    tokenizer=tokenizer,
-                    condition=condition,
-                    total_samples=num_samples,
-                    num_of_qubits=num_qubits,
-                    min_gates=min_gates,
-                    max_gates=max_gates,
-                    min_sub_gate_pool_cnt=2,
-                    fixed_sub_gate_pool=gate_set,
-                    optimized=optimized,
-                    post_randomize_params=False,  # TODO: change when switching to parameterized circuits
-                    n_jobs=n_jobs,
+                    **generation_kwargs,
                 )
 
                 dataset_params = {
@@ -207,13 +221,24 @@ class DatasetGenerator:
                     dataset.U = Us.float()
                     datasets_list = [dataset]
 
+                    if balance_after_generation:
+                        dataset.add_balance_fn = partial(
+                            add_balance_fn_quantile_qc_length,
+                            padding_token=dataset_params["pad_constant"],
+                            balance_quantile=balance_quantile,
+                            device=torch.device(self.device),
+                        )
+
                     parameters = asdict(dataset.params_config)
                     parameters["model_scale_factor"] = 4
+                    effective_balance_max = (
+                        balance_max if balance_after_generation else int(1e8)
+                    )
 
                     mixed_dataset, _ = (
                         circuits_dataset.MixedCircuitsConfigDataset.from_datasets(
                             datasets_list,
-                            balance_maxes=[int(1e8)],
+                            balance_maxes=[effective_balance_max],
                             pad_constant=dataset_params["pad_constant"],
                             device=self.device,
                             bucket_batch_size=-1,

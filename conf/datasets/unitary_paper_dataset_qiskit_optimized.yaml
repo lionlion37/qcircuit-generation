@@ -1,0 +1,39 @@
+# Training unitary-compilation dataset based on Fürrutter et al.
+# Paper: https://arxiv.org/html/2311.02041
+#
+# Paper locations:
+# - Appendix B / "Dataset", lines 194-206:
+#   random-circuit generation, unitary conditioning, transpile optimization,
+#   duplicate removal, prompt/length balancing, and final training-set sizes.
+# - Appendix B / line 216:
+#   Compilation task uses 3 qubits, gate counts 2..12, gate set
+#   {H, CX, Z, X, CCX, SWAP}.
+#
+# Parameters matched from the paper:
+# - 3 qubits
+# - gate pool {H, CX, Z, X, CCX, SWAP}
+# - circuit lengths 2..12
+# - optimized circuits
+# - unitary conditioning
+# - reported final training-set size: 2.5M distinct circuits
+#
+# Important limitation:
+# The paper's training set is post-processed by duplicate removal and then
+# balanced first by prompt and then by circuit length. This generator config
+# now exposes the existing dataset-layer balancing hooks, but the exact
+# prompt-balance cap still requires tuning because the paper does not report it.
+
+gate_set: ['h', 'cx', 'z', 'x', 'ccx', 'swap']
+num_qubits: 3
+num_samples: 2500000  # paper reports 2.5M distinct training circuits after post-processing
+min_gates: 2
+max_gates: 12
+condition_type: UNITARY
+backbone: qiskit
+optimized: true
+balance_after_generation: true
+balance_max: 100000000  # permissive cap; tune to match the paper's final post-balanced size more closely
+balance_quantile: 0.25
+device: auto
+n_jobs: 4
+output_path: ./datasets/paper_qiskit/unitary_3q_dataset

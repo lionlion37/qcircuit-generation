@@ -1,0 +1,14 @@
+# Evaluation target-unitary dataset based on Fürrutter et al.
+# Paper: https://arxiv.org/html/2311.02041
+
+gate_set: ['h', 'cx', 'z', 'x', 'ccx', 'swap']
+num_qubits: 3
+num_samples: 3100
+min_gates: 2
+max_gates: 12
+condition_type: UNITARY
+backbone: qiskit
+optimized: true
+device: auto
+n_jobs: 4
+output_path: ./datasets/paper_qiskit/unitary_3q_eval_targets
