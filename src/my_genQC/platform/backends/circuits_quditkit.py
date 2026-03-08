@@ -99,10 +99,8 @@ class CircuitsQuditkitBackend(BaseBackend):
         return qc
 
     def get_unitary(self, qc: QuantumCircuit, remove_global_phase: bool = True) -> np.ndarray:
-        """Return the unitary matrix of a `QuantumCircuit`."""
+        """Return the unitary matrix of a `QuantumCircuit`. Note that remove_global_phase is not supported."""
         U = qc.get_unitary().astype(np.complex128)
-        if remove_global_phase:
-            U *= np.exp(-1j * qc.global_phase)
         return U
 
     def schmidt_rank_vector(self, qc: Optional[QuantumCircuit] = None,
