@@ -145,6 +145,7 @@ class FrozenOpenCLIPEmbedder(ConfigModel):
 @dataclass
 class CachedFrozenOpenCLIPEmbedderConfig(FrozenOpenCLIPEmbedderConfig):
     enable_cache_token_limit: bool
+    local_weights_path: Optional[str] 
 
 # %% ../../src/training/frozen_open_clip.ipynb 18
 class CachedFrozenOpenCLIPEmbedder(FrozenOpenCLIPEmbedder):
@@ -154,7 +155,7 @@ class CachedFrozenOpenCLIPEmbedder(FrozenOpenCLIPEmbedder):
         super().__init__(arch=arch, version=version, max_length=max_length, freeze=freeze, layer=layer, local_weights_path=local_weights_path, **kwargs)
         self.enable_cache_token_limit = enable_cache_token_limit
 
-        self.params_config = CachedFrozenOpenCLIPEmbedderConfig(arch, version, max_length, freeze, layer, enable_cache_token_limit)
+        self.params_config = CachedFrozenOpenCLIPEmbedderConfig(arch, version, max_length, freeze, layer, enable_cache_token_limit, local_weights_path)
     
     def get_token_count(self, tokens, padding_token=0):
         # tokens .. [b, seq]
