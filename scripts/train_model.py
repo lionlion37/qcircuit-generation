@@ -69,15 +69,23 @@ def main(cfg):
         # Start experiment logging
         exp_logger.start_experiment(trainer.config)
         
-        # Setup model
-        logger.info("Setting up diffusion model...")
-        exp_logger.log_step("setup", "Initializing model architecture")
-        trainer.setup_model(dataset=dataset, text_encoder=dataset_loader.text_encoder)
-        
-        # Load checkpoint if resuming TODO: check implementation and test, not correct!
-        if cfg.general.resume:
-            logger.info(f"Resuming training from {cfg.general.resume}")
-            trainer.load_model(cfg.general.resume)
+        init_from_pipeline_dir = cfg.general.get("init_from_pipeline_dir")
+        if init_from_pipeline_dir:
+            logger.info(f"Loading pipeline from {init_from_pipeline_dir}")
+            exp_logger.log_step(
+                "setup", f"Loading pipeline from {init_from_pipeline_dir}"
+            )
+            trainer.pipeline = DiffusionTrainer.load_pipeline(
+                model_dir=init_from_pipeline_dir,
+                repo_id=None,
+                device=device,
+            )
+            trainer.model = trainer.pipeline.model
+            trainer.scheduler = trainer.pipeline.scheduler
+        else:
+            logger.info("Setting up diffusion model...")
+            exp_logger.log_step("setup", "Initializing model architecture")
+            trainer.setup_model(dataset=dataset, text_encoder=dataset_loader.text_encoder)
         
         # Compile model
         logger.info("Compiling model for training...")

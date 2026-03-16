@@ -206,7 +206,7 @@ class MixedCircuitsConfigDataset(CircuitsConfigDataset, MixedCachedOpenCLIPDatas
             
             red_x   = torch.sum(x.abs(), dim=1)          # [b, t]   .. collaps the zeros to get circuit length
             z[:, 1] = torch.count_nonzero(red_x, dim=1)  # [b]         
-            z[z[:, 1]==0, 1] = 1            
+            z[z[:, 1]==0, 1] = 1      
 
         # Create masks for space and time padding
         space_mask = torch.arange(x.shape[1], device=x.device).unsqueeze(0) >= z[:, 0].unsqueeze(1)

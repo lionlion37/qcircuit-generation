@@ -37,6 +37,33 @@ class MixedCachedOpenCLIPDataset(CachedOpenCLIPDataset):
     #-----------------------------------
     # functions to combine multiple datasets together
 
+    @staticmethod
+    def _bucketize_loaded_dataset(x, y, z_proc, bucket_batch_size):
+        z_main, *extra = z_proc
+        order = torch.argsort(z_main[:, 0], stable=True)
+
+        x = x[order]
+        y = y[order]
+        z_main = z_main[order]
+        extra = [item[order] for item in extra]
+
+        bucket_count = x.shape[0] // bucket_batch_size
+        if bucket_count <= 0:
+            raise ValueError(
+                f"Dataset too small for bucket batching: {x.shape[0]} samples for bucket size {bucket_batch_size}."
+            )
+
+        keep = bucket_count * bucket_batch_size
+        x = x[:keep].reshape(bucket_count, bucket_batch_size, *x.shape[1:])
+        y = y[:keep].reshape(bucket_count, bucket_batch_size, *y.shape[1:])
+        z_main = z_main[:keep].reshape(bucket_count, bucket_batch_size, *z_main.shape[1:])
+        extra = [
+            item[:keep].reshape(bucket_count, bucket_batch_size, *item.shape[1:])
+            for item in extra
+        ]
+
+        return x, y, [z_main, *extra]
+
     @classmethod
     def _preprocess_datasets(dataset_cls, datasets, device, balance_maxes, max_samples, shuffle, 
                              make_unique, pad_constant, model_scale_factor, parameters, **kwargs):
@@ -258,12 +285,14 @@ class MixedCachedOpenCLIPDataset(CachedOpenCLIPDataset):
                                                                max_samples=None, 
                                                                make_unique=False)    # ... z_proc is `'z' and all other 'c'
         if caching:
-            if self.bucket_batch_size <= 0:        
-                y_proc = self.caching(y_proc, y_on_cpu=y_on_cpu, text_encoder_njobs=text_encoder_njobs)
-                          
-            else:                    
-                y_proc = self.caching([yi.reshape((-1)) for yi in y_proc], y_on_cpu=y_on_cpu, text_encoder_njobs=text_encoder_njobs)
-                y_proc = y_proc.reshape((-1, self.bucket_batch_size))
+            y_proc = self.caching(
+                y_proc, y_on_cpu=y_on_cpu, text_encoder_njobs=text_encoder_njobs
+            )
+
+        if self.bucket_batch_size > 0:
+            x_proc, y_proc, z_proc = self._bucketize_loaded_dataset(
+                x_proc, y_proc, z_proc, self.bucket_batch_size
+            )
         
         #-------------------------
         # valid split and to device
@@ -296,13 +325,15 @@ class MixedCachedOpenCLIPDataset(CachedOpenCLIPDataset):
             print("[WARNING]: self.collate_fn does not exist, using torch.utils.data.default_collate.")
             collate_fn = torch.utils.data.default_collate
 
+        loader_batch_size = 1 if self.bucket_batch_size > 0 else batch_size
+
         if self.params_config.dataset_to_gpu: 
-            train_loader = DataLoader(dataset=ds      , batch_size=batch_size, shuffle=True, collate_fn=collate_fn)
-            valid_loader = DataLoader(dataset=ds_valid, batch_size=batch_size, shuffle=True, collate_fn=collate_fn)
+            train_loader = DataLoader(dataset=ds      , batch_size=loader_batch_size, shuffle=True, collate_fn=collate_fn)
+            valid_loader = DataLoader(dataset=ds_valid, batch_size=loader_batch_size, shuffle=True, collate_fn=collate_fn)
 
         else:              
-            train_loader = DataLoader(dataset=ds      , batch_size=batch_size, shuffle=True, pin_memory=False, num_workers=0, collate_fn=collate_fn)
-            valid_loader = DataLoader(dataset=ds_valid, batch_size=batch_size, shuffle=True, pin_memory=False, num_workers=0, collate_fn=collate_fn)
+            train_loader = DataLoader(dataset=ds      , batch_size=loader_batch_size, shuffle=True, pin_memory=False, num_workers=0, collate_fn=collate_fn)
+            valid_loader = DataLoader(dataset=ds_valid, batch_size=loader_batch_size, shuffle=True, pin_memory=False, num_workers=0, collate_fn=collate_fn)
 
         self.dataloaders = DataLoaders(train_loader, valid_loader)        
         return self.dataloaders

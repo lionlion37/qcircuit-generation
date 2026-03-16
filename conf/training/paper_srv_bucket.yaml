@@ -4,12 +4,12 @@
 
 general:
   output_path: ./models/trained/
-  model_name: paper_srv_model
+  model_name: paper_srv_bucket
   experiment_name: paper_srv_reproduction
+  init_from_pipeline_dir: ./models/trained/paper_srv_model
   dataset: ./datasets/qc_srv_dataset_3to8qubit  # srv_3q through srv_8q combined
   njobs: 8
   device: auto
-  init_from_pipeline_dir: null
   verbose: true
 
 model:
@@ -26,16 +26,17 @@ model:
     transformer_depths: [1, 2, 1]
 
 training:
-  learning_rate: 3e-4
+  padding_mode: bucket
+  learning_rate: 5e-5
   optimizer: Adam
   loss: MSELoss
-  num_epochs: 75
+  num_epochs: 50
   batch_size: 256
   enable_guidance_train: true
   guidance_train_p: 0.1
   cached_text_enc: true
   output_path: ./models/trained/
-  model_name: paper_srv_model
+  model_name: paper_srv_bucket
   experiment_name: paper_srv_reproduction
   ckpt_path: ./models/cp_saves/
   ckpt_interval: 5

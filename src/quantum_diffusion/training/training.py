@@ -309,36 +309,28 @@ class DiffusionTrainer:
             self.logger.error(f"Error saving model: {e}")
             raise
 
-    def load_model(self, model_path: str) -> None:
-        """Load a previously trained model.
+    @staticmethod
+    def load_pipeline(
+        model_dir: Path | str | None,
+        repo_id: Optional[str],
+        device: torch.device | str,
+    ):
+        # TODO: local_weights_path based text encoders are not fully reconstructible from saved pipeline config alone.
+        if repo_id:
+            return DiffusionPipeline.from_pretrained(repo_id=repo_id, device=device)
 
-        Args:
-            model_path: Path to the saved model
-        """
-        try:
-            # Load configuration
-            model_folder = Path(model_path).parent
-            config_path = os.path.join(model_folder, "config.yaml")
-            if os.path.exists(config_path):
-                with open(config_path, "r") as f:
-                    self.config = yaml.safe_load(f)
+        if not model_dir:
+            raise ValueError("Provide either a model directory or a Hugging Face repo id.")
 
-            # Load model weights
-            if os.path.exists(model_path):
-                if self.model is None:
-                    self.logger.warning(
-                        "Model not initialized. Call setup_model first."
-                    )
-                    return
+        model_dir = Path(model_dir).resolve()
+        config_path = model_dir if model_dir.is_dir() else model_dir.parent
+        cfg_file = config_path / "config.yaml"
+        if not cfg_file.exists():
+            raise FileNotFoundError(f"Missing pipeline config at {cfg_file}")
 
-                state_dict = torch.load(model_path, map_location=self.device)
-                self.model.load_state_dict(state_dict)
-
-            self.logger.info(f"Model loaded from {model_path}")
-
-        except Exception as e:
-            self.logger.error(f"Error loading model: {e}")
-            raise
+        return DiffusionPipeline.from_config_file(
+            config_path=str(config_path) + "/", device=device
+        )
 
 
 class ModelManager:
@@ -400,7 +392,11 @@ class ModelManager:
             raise FileNotFoundError(f"Model '{name}' not found at {model_path}")
 
         trainer = DiffusionTrainer(device=device)
-        trainer.load_model(str(model_path))
+        trainer.pipeline = DiffusionTrainer.load_pipeline(
+            model_dir=model_path, repo_id=None, device=trainer.device
+        )
+        trainer.model = trainer.pipeline.model
+        trainer.scheduler = trainer.pipeline.scheduler
         self.register_model(name, trainer)
 
         return trainer

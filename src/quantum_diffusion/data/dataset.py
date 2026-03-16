@@ -241,7 +241,7 @@ class DatasetGenerator:
                             balance_maxes=[effective_balance_max],
                             pad_constant=dataset_params["pad_constant"],
                             device=self.device,
-                            bucket_batch_size=-1,
+                            bucket_batch_size=self._get_bucket_batch_size(),
                             max_samples=[int(1e8)],
                             **parameters,
                         )
@@ -307,6 +307,75 @@ class DatasetLoader:
         )
         self.logger = Logger(__name__)
         self.config = dict(config)
+
+    def _get_bucket_batch_size(self) -> int:
+        training_config = self.config.get("training", {})
+        padding_mode = training_config.get("padding_mode", "max")
+        if padding_mode != "bucket":
+            return -1
+
+        batch_size = training_config.get("batch_size")
+        if not batch_size:
+            raise ValueError(
+                "Bucket padding requires training.batch_size to be a positive integer."
+            )
+
+        return int(batch_size)
+
+    def _infer_z_from_x(self, dataset) -> torch.Tensor:
+        x = dataset.x
+        if not isinstance(x, torch.Tensor) or x.ndim != 3:
+            raise ValueError("Expected dataset.x to be a rank-3 tensor [batch, qubits, time].")
+
+        pad_constant = getattr(
+            dataset.params_config, "pad_constant", len(dataset.gate_pool) + 1
+        )
+        non_pad = x != pad_constant
+
+        z = torch.zeros((x.shape[0], 2), device=x.device, dtype=torch.int32)
+        z[:, 0] = non_pad.any(dim=2).sum(dim=1).to(torch.int32)
+        z[:, 1] = non_pad.any(dim=1).sum(dim=1).to(torch.int32)
+
+        z[z[:, 0] == 0, 0] = 1
+        z[z[:, 1] == 0, 1] = 1
+        return z
+
+    def _ensure_bucket_z(self, dataset, dataset_path: str) -> None:
+        if self._get_bucket_batch_size() <= 0 or "z" in dataset.store_dict:
+            return
+
+        self.logger.info(
+            "Bucket padding requested and dataset has no z metadata. Inferring z from x..."
+        )
+        dataset.z = self._infer_z_from_x(dataset).cpu()
+        dataset.store_dict["z"] = "tensor"
+
+        config_path = Path(dataset_path) / "config.yaml"
+        save_path = Path(dataset_path) / "dataset" / "ds"
+        dataset.save_dataset(config_path=str(config_path), save_path=str(save_path))
+        self.logger.info(f"Persisted inferred z metadata to {save_path}_z")
+
+    def _configure_bucket_dataset(self, dataset) -> None:
+        bucket_batch_size = self._get_bucket_batch_size()
+        if bucket_batch_size <= 0 or not hasattr(dataset, "bucket_batch_size"):
+            return
+
+        dataset.bucket_batch_size = bucket_batch_size
+
+        has_unitary = "U" in dataset.store_dict
+        has_params = "params" in dataset.store_dict
+        if has_unitary and has_params:
+            dataset.collate_fn = (
+                circuits_dataset.MixedCircuitsConfigDataset.cut_padding_Bucket_collate_fn_compilation_params.__name__
+            )
+        elif has_unitary:
+            dataset.collate_fn = (
+                circuits_dataset.MixedCircuitsConfigDataset.cut_padding_Bucket_collate_fn_compilation.__name__
+            )
+        else:
+            dataset.collate_fn = (
+                circuits_dataset.MixedCircuitsConfigDataset.cut_padding_Bucket_collate_fn.__name__
+            )
 
     def _load_embedder(self, dataset):
         self.vocabulary = {
@@ -395,6 +464,9 @@ class DatasetLoader:
                 **kwargs,
             )
 
+            self._ensure_bucket_z(dataset=dataset, dataset_path=dataset_path)
+            self._configure_bucket_dataset(dataset)
+
             if load_embedder:
                 self.text_encoder = self._load_embedder(dataset=dataset)
 
@@ -436,7 +508,7 @@ class DatasetLoader:
                 balance_maxes=[int(1e8)] * len(datasets),
                 pad_constant=len(datasets[0].gate_pool) + 1,
                 device=self.device,
-                bucket_batch_size=-1,  # TODO: check this parameter and balancing in general
+                bucket_batch_size=self._get_bucket_batch_size(),
                 max_samples=[int(1e8)] * len(datasets),
             )
 
