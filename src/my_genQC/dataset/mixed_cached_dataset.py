@@ -285,9 +285,17 @@ class MixedCachedOpenCLIPDataset(CachedOpenCLIPDataset):
                                                                max_samples=None, 
                                                                make_unique=False)    # ... z_proc is `'z' and all other 'c'
         if caching:
-            y_proc = self.caching(
-                y_proc, y_on_cpu=y_on_cpu, text_encoder_njobs=text_encoder_njobs
-            )
+            if self.bucket_batch_size <= 0:
+                y_proc = self.caching(
+                    y_proc, y_on_cpu=y_on_cpu, text_encoder_njobs=text_encoder_njobs
+                )
+            else:
+                y_proc = self.caching(
+                    [yi.reshape((-1)) for yi in y_proc],
+                    y_on_cpu=y_on_cpu,
+                    text_encoder_njobs=text_encoder_njobs,
+                )
+                y_proc = y_proc.reshape((-1, self.bucket_batch_size))
         
         #-------------------------
         # valid split and to device
