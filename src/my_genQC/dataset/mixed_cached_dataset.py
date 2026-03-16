@@ -288,11 +288,6 @@ class MixedCachedOpenCLIPDataset(CachedOpenCLIPDataset):
             y_proc = self.caching(
                 y_proc, y_on_cpu=y_on_cpu, text_encoder_njobs=text_encoder_njobs
             )
-
-        if self.bucket_batch_size > 0:
-            x_proc, y_proc, z_proc = self._bucketize_loaded_dataset(
-                x_proc, y_proc, z_proc, self.bucket_batch_size
-            )
         
         #-------------------------
         # valid split and to device

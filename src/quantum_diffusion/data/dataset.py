@@ -484,6 +484,19 @@ class DatasetLoader:
                 dataset_path=dataset_path, load_embedder=load_embedder, **kwargs
             )
 
+            # bucket padding expects a MixedCircuitsDataset, so we have to convert to that
+            if self._get_bucket_batch_size() > 0 and type(dataset) == circuits_dataset.CircuitsConfigDataset:
+                dataset = self.combine_datasets(
+                    [dataset],
+                    model_scale_factor=4,
+                    balance_maxes=[int(1e8)],
+                    pad_constant=len(dataset.gate_pool) + 1,
+                    device=self.device,
+                    bucket_batch_size=self._get_bucket_batch_size(),
+                    max_samples=[int(1e8)],
+
+                )
+
         else:  # combine multiple datasets with different numbers of qubits
             self.logger.info(
                 "Detected multiple datasets in dataset_path. Loading all and combining them..."
