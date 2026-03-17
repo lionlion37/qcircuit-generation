@@ -42,8 +42,8 @@ class FrozenOpenCLIPEmbedderConfig:
     max_length: int
     freeze: bool
     layer: str
-    local_weights_path: Optional[str] = None
-    cloob_weights_path: Optional[str] = None
+    local_weights_path: Optional[str]
+    cloob_weights_path: Optional[str]
 
 # %% ../../../src/training/clip/frozen_open_clip.ipynb 6
 class FrozenOpenCLIPEmbedder(ConfigModel):
