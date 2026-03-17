@@ -82,6 +82,8 @@ def main(cfg):
             )
             trainer.model = trainer.pipeline.model
             trainer.scheduler = trainer.pipeline.scheduler
+            trainer.pipeline.tex_encoder = dataset_loader.text_encoder
+
         else:
             logger.info("Setting up diffusion model...")
             exp_logger.log_step("setup", "Initializing model architecture")
