@@ -27,7 +27,6 @@ from my_genQC.utils.misc_utils import infer_torch_device
 
 from quantum_diffusion.utils.config import ConfigManager
 from quantum_diffusion.utils.logging import Logger
-from quantum_diffusion.utils.model_helper import remap_cloob_key
 
 
 class DatasetGenerator:
@@ -403,31 +402,6 @@ class DatasetLoader:
         text_encoder_config["target"] = target
 
         text_encoder = ConfigModel.from_config(text_encoder_config, self.device)
-
-        # load CLOOB weights with key remapping (separate from standard OpenCLIP local_weights_path)
-        cloob_weights_path = self.config["text_encoder"]["params"].get(
-            "cloob_weights_path"
-        )
-        if cloob_weights_path:
-            self.logger.info(f"Loading CLOOB weights from {cloob_weights_path}...")
-            text_encoder.params_config.version = "cloob"
-
-            cloob_checkpoint = torch.load(cloob_weights_path, weights_only=True)
-
-            sd = cloob_checkpoint["state_dict"]
-
-            # adapt CLOOB state_dict to genQC CLIP
-            sd = {k.replace("module.", "", 1): v for k, v in sd.items()}
-            sd = {remap_cloob_key(k): v for k, v in sd.items()}
-
-            # Load non-strict to ignore visual weights
-            incomp = text_encoder.model.load_state_dict(sd, strict=False)
-            self.logger.warning(
-                f"{len(incomp.missing_keys)} missing keys, first 10: {incomp.missing_keys[:10]}"
-            )
-            self.logger.warning(
-                f"{len(incomp.unexpected_keys)} unexpected keys, first 10: {incomp.unexpected_keys[:10]}"
-            )
 
         return text_encoder
 

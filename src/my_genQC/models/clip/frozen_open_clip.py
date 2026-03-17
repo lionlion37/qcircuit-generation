@@ -14,6 +14,25 @@ from ...utils.misc_utils import infer_torch_device
 import open_clip
 from typing import Optional
 
+
+def remap_cloob_key(k: str) -> str:
+    if k.startswith("transformer.transformer."):
+        k = k.replace("transformer.transformer.", "transformer.", 1)
+
+    if k == "transformer.positional_embedding":
+        k = "positional_embedding"
+    if k == "transformer.text_projection":
+        k = "text_projection"
+    if k == "logit_inv_tau":
+        k = "logit_scale"
+
+    if k.startswith("transformer.token_embedding."):
+        k = k.replace("transformer.token_embedding.", "token_embedding.", 1)
+    if k.startswith("transformer.ln_final."):
+        k = k.replace("transformer.ln_final.", "ln_final.", 1)
+
+    return k
+
 # %% ../../../src/training/clip/frozen_open_clip.ipynb 5
 @dataclass
 class FrozenOpenCLIPEmbedderConfig:
@@ -23,6 +42,8 @@ class FrozenOpenCLIPEmbedderConfig:
     max_length: int
     freeze: bool
     layer: str
+    local_weights_path: Optional[str] = None
+    cloob_weights_path: Optional[str] = None
 
 # %% ../../../src/training/clip/frozen_open_clip.ipynb 6
 class FrozenOpenCLIPEmbedder(ConfigModel):
@@ -36,17 +57,36 @@ class FrozenOpenCLIPEmbedder(ConfigModel):
 
     njobs = 1
 
-    def __init__(self, arch="ViT-B-32", version="datacomp_xl_s13b_b90k", max_length=77, freeze=True, layer="penultimate", **kwargs):
+    def __init__(self, arch="ViT-B-32", version="datacomp_xl_s13b_b90k", max_length=77, freeze=True, layer="penultimate", local_weights_path=None, cloob_weights_path=None, **kwargs):
         super().__init__(**kwargs)        
         
         assert layer in self.LAYERS     
-        self.params_config = FrozenOpenCLIPEmbedderConfig(arch, version, max_length, freeze, layer)
-        
-        model, _, _ = open_clip.create_model_and_transforms(arch, device="cpu", pretrained=version)
+        if local_weights_path and cloob_weights_path:
+            raise ValueError("Provide either local_weights_path or cloob_weights_path, not both.")
+
+        if local_weights_path and self._looks_like_cloob_checkpoint(local_weights_path):
+            cloob_weights_path = local_weights_path
+            local_weights_path = None
+
+        self.params_config = FrozenOpenCLIPEmbedderConfig(
+            arch,
+            version,
+            max_length,
+            freeze,
+            layer,
+            local_weights_path,
+            cloob_weights_path,
+        )
+
+        pretrained = local_weights_path if local_weights_path else version
+        model, _, _ = open_clip.create_model_and_transforms(arch, device="cpu", pretrained=pretrained)
         self.device = "cpu"
         
         del model.visual     
         self.model = model
+
+        if cloob_weights_path:
+            self._load_cloob_weights(cloob_weights_path)
         # self.to(device)
         
         self.tokenizer = open_clip.get_tokenizer(arch)
@@ -64,7 +104,41 @@ class FrozenOpenCLIPEmbedder(ConfigModel):
 
         #create empty token, can also be, e.g., A nice picture
         self.empty_token = self.tokenize_and_push_to_device("")
-        
+
+    @staticmethod
+    def _looks_like_cloob_checkpoint(weights_path: str) -> bool:
+        try:
+            checkpoint = torch.load(weights_path, map_location="cpu", weights_only=True)
+        except Exception:
+            return False
+
+        state_dict = checkpoint.get("state_dict", checkpoint) if isinstance(checkpoint, dict) else {}
+        if not isinstance(state_dict, dict):
+            return False
+
+        cloob_markers = (
+            "transformer.positional_embedding",
+            "transformer.text_projection",
+            "logit_inv_tau",
+        )
+        return any(key in state_dict for key in cloob_markers)
+
+    def _load_cloob_weights(self, weights_path: str):
+        print(f"[INFO]: Loading CLOOB weights from {weights_path}")
+        checkpoint = torch.load(weights_path, map_location="cpu", weights_only=True)
+        state_dict = checkpoint.get("state_dict", checkpoint)
+        if not isinstance(state_dict, dict):
+            raise RuntimeError(f"Invalid CLOOB checkpoint at {weights_path}: expected a state_dict-like mapping.")
+
+        state_dict = {k.replace("module.", "", 1): v for k, v in state_dict.items()}
+        state_dict = {remap_cloob_key(k): v for k, v in state_dict.items()}
+
+        incompatible = self.model.load_state_dict(state_dict, strict=False)
+        if len(incompatible.missing_keys) > 0:
+            print(f"[WARNING]: {len(incompatible.missing_keys)} missing CLOOB keys, first 10: {incompatible.missing_keys[:10]}")
+        if len(incompatible.unexpected_keys) > 0:
+            print(f"[WARNING]: {len(incompatible.unexpected_keys)} unexpected CLOOB keys, first 10: {incompatible.unexpected_keys[:10]}")
+
     def freeze(self, freeze: bool = True):
         super().freeze(freeze=freeze)
                     
@@ -150,11 +224,20 @@ class CachedFrozenOpenCLIPEmbedderConfig(FrozenOpenCLIPEmbedderConfig):
 class CachedFrozenOpenCLIPEmbedder(FrozenOpenCLIPEmbedder):
     """Adds caching support to `FrozenOpenCLIPEmbedder`."""
 
-    def __init__(self, arch="ViT-B-32", version="datacomp_xl_s13b_b90k", max_length=77, freeze=True, layer="penultimate", enable_cache_token_limit: bool = True, **kwargs):
-        super().__init__(arch=arch, version=version, max_length=max_length, freeze=freeze, layer=layer, **kwargs)  
+    def __init__(self, arch="ViT-B-32", version="datacomp_xl_s13b_b90k", max_length=77, freeze=True, layer="penultimate", enable_cache_token_limit: bool = True, local_weights_path=None, cloob_weights_path=None, **kwargs):
+        super().__init__(arch=arch, version=version, max_length=max_length, freeze=freeze, layer=layer, local_weights_path=local_weights_path, cloob_weights_path=cloob_weights_path, **kwargs)  
         self.enable_cache_token_limit = enable_cache_token_limit
 
-        self.params_config = CachedFrozenOpenCLIPEmbedderConfig(arch, version, max_length, freeze, layer, enable_cache_token_limit)
+        self.params_config = CachedFrozenOpenCLIPEmbedderConfig(
+            arch,
+            version,
+            max_length,
+            freeze,
+            layer,
+            local_weights_path,
+            cloob_weights_path,
+            enable_cache_token_limit,
+        )
     
     def get_token_count(self, tokens, padding_token=0):
         # tokens .. [b, seq]
