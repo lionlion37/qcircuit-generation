@@ -2,7 +2,7 @@ dataset: ./datasets/paper_quditkit/srv_8q_dataset # qc_srv_dataset_3to8qubit # s
 model_dir: ./models/trained/paper_srv_model
 hf_repo: null 
 num_samples: 5000 # 999999
-# max_gates: 16
+max_gates: 16
 backend: quditkit
 save_output: false # true
 save_folder: ./scripts/inference/
