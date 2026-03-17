@@ -328,9 +328,15 @@ class DiffusionTrainer:
         if not cfg_file.exists():
             raise FileNotFoundError(f"Missing pipeline config at {cfg_file}")
 
-        return DiffusionPipeline.from_config_file(
+        pipeline = DiffusionPipeline.from_config_file(
             config_path=str(config_path) + "/", device=device
         )
+
+        # unfreeze pipeline for training
+        pipeline.model.unfreeze()
+        pipeline.embedder.unfreeze()
+
+        return pipeline
 
 
 class ModelManager:
