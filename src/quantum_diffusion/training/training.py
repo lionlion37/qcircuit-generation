@@ -334,7 +334,6 @@ class DiffusionTrainer:
 
         # unfreeze pipeline for training
         pipeline.model.unfreeze()
-        pipeline.embedder.unfreeze()
 
         return pipeline
 
