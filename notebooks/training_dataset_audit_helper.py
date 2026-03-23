@@ -19,7 +19,7 @@ except ModuleNotFoundError as exc:
     ) from exc
 
 
-TRAINING_REPO = Path("/home/liondungl/projects/qcircuit-generation")
+TRAINING_REPO = Path("/workspace/qcircuit-generation")
 TRAINING_SRC = TRAINING_REPO / "src"
 DEFAULT_TRAINING_CFG = TRAINING_REPO / "conf" / "training" / "paper_srv_bucket.yaml"
 DEFAULT_DATASET_ROOT = TRAINING_REPO / "datasets" / "qc_srv_dataset_3to8qubit"
