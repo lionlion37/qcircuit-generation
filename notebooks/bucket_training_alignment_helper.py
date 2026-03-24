@@ -25,6 +25,7 @@ DEFAULT_DATASET_ROOT = REPO_ROOT / "datasets" / "qc_srv_dataset_3to8qubit"
 if str(SRC_ROOT) not in sys.path:
     sys.path.insert(0, str(SRC_ROOT))
 
+from my_genQC.dataset.config_dataset import ConfigDataset
 from quantum_diffusion.data import DatasetLoader
 
 
@@ -261,18 +262,36 @@ def build_exact_training_tensor_datasets(
     if effective_batch_size <= 0:
         raise ValueError("Bucket training dataset must expose a positive bucket_batch_size.")
 
-    torch.manual_seed(seed)
-    train_ds, valid_ds = dataset.get_dataloaders(
-        batch_size=effective_batch_size,
-        text_encoder=None,
-        p_valid=split_ratio,
-        y_on_cpu=False,
-        return_tensor_datasets=True,
-        shuffle=True,
-        shuffle_cpu_copy=True,
-        caching=False,
+    x_proc, _y_proc, *z_proc = ConfigDataset.x_y_preprocess(
+        dataset,
+        balance_max=None,
+        shuffle=False,
+        max_samples=None,
+        make_unique=False,
     )
-    return train_ds, valid_ds
+    if not z_proc:
+        raise ValueError("Bucket dataset preprocessing did not return z metadata.")
+
+    # The alignment audit only depends on x and z. We intentionally skip CLIP
+    # caching here and use a dummy tensor for y so the split and collate path
+    # can still be reproduced without requiring cached text features.
+    if x_proc.ndim >= 2:
+        dummy_y = torch.zeros(x_proc.shape[:2], dtype=torch.int64, device=x_proc.device)
+    else:
+        dummy_y = torch.zeros((x_proc.shape[0], 1), dtype=torch.int64, device=x_proc.device)
+
+    torch.manual_seed(seed)
+    x_train, x_valid, y_train, y_valid, (z_train, z_valid) = dataset.valid_split(
+        x_proc,
+        dummy_y,
+        *z_proc,
+        p_valid=split_ratio,
+        y_type="tensor",
+        split_sequential=False,
+    )
+    train_tensors = (x_train, y_train, *z_train)
+    valid_tensors = (x_valid, y_valid, *z_valid)
+    return TensorDataset(*train_tensors), TensorDataset(*valid_tensors)
 
 
 def summarize_tensor_dataset_alignment(
