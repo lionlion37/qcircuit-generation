@@ -186,14 +186,20 @@ class MixedCircuitsConfigDataset(CircuitsConfigDataset, MixedCachedOpenCLIPDatas
 
         dataset = dataset.to(device)
 
-        existing_z_type = dataset.store_dict.pop("z", None)  # remove z, as it would mess up `ConfigDataset.x_y_preprocess`, it would be put in `*c`.
-        if exists(existing_z_type):
-            assert existing_z_type == "tensor"
-            z = dataset.z
-        else:
-            z = None
-        
-        x, y, *c = ConfigDataset.x_y_preprocess(dataset, balance_max=balance_max, max_samples=max_samples[i], shuffle=shuffle, make_unique=make_unique)       
+        extra_keys = [k for k in dataset.store_dict.keys() if k != "x" and k != "y"]
+        x, y, *extras = ConfigDataset.x_y_preprocess(
+            dataset,
+            balance_max=balance_max,
+            max_samples=max_samples[i],
+            shuffle=shuffle,
+            make_unique=make_unique,
+        )
+
+        assert len(extras) == len(extra_keys), f"{len(extras)=} != {len(extra_keys)=}"
+        extras_by_key = {key: value for key, value in zip(extra_keys, extras)}
+        z = extras_by_key.pop("z", None)
+        c = [extras_by_key[key] for key in extra_keys if key != "z"]
+
         x = x.to(device)    # [b, s, t]   
         
         print(f" - dataset size after balancing {x.shape[0]}")
