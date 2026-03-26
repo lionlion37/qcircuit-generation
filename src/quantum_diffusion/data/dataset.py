@@ -376,6 +376,22 @@ class DatasetLoader:
                 circuits_dataset.MixedCircuitsConfigDataset.cut_padding_Bucket_collate_fn.__name__
             )
 
+    def _ignore_persisted_z_for_plain_dataset(self, dataset) -> None:
+        if (
+            self._get_bucket_batch_size() > 0
+            or type(dataset) != circuits_dataset.CircuitsConfigDataset
+            or "z" not in dataset.store_dict
+        ):
+            return
+
+        # Bucket-mode runs persist `z` so they can reorder/cut batches later.
+        # Plain CircuitsConfigDataset loading does not consume `z`, so keeping it
+        # in store_dict changes the batch arity from `(x, y, ...)` to `(x, y, z, ...)`.
+        dataset.store_dict = {k: v for k, v in dataset.store_dict.items() if k != "z"}
+        self.logger.info(
+            "Ignoring persisted z metadata for plain max-padding training."
+        )
+
     def _load_embedder(self, dataset):
         self.vocabulary = {
             gate: idx
@@ -472,8 +488,10 @@ class DatasetLoader:
                     device=self.device,
                     bucket_batch_size=self._get_bucket_batch_size(),
                     max_samples=[int(1e8)],
-
+                    shuffle=False,
                 )
+            else:
+                self._ignore_persisted_z_for_plain_dataset(dataset)
 
         else:  # combine multiple datasets with different numbers of qubits
             self.logger.info(
@@ -501,6 +519,7 @@ class DatasetLoader:
                 device=self.device,
                 bucket_batch_size=self._get_bucket_batch_size(),
                 max_samples=[int(1e8)] * len(datasets),
+                shuffle=False if self._get_bucket_batch_size() > 0 else True,
             )
 
         return dataset
@@ -517,6 +536,9 @@ class DatasetLoader:
         """
         try:
             dataset_params = asdict(datasets[0].params_config)
+            if "shuffle" not in kwargs:
+                bucket_batch_size = int(kwargs.get("bucket_batch_size", -1) or -1)
+                kwargs["shuffle"] = bucket_batch_size <= 0
             mixed_dataset, _ = (
                 circuits_dataset.MixedCircuitsConfigDataset.from_datasets(
                     datasets, **dataset_params, **kwargs
