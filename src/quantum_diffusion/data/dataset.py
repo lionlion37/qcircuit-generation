@@ -476,11 +476,6 @@ class DatasetLoader:
 
             # bucket padding expects a MixedCircuitsDataset, so we have to convert to that
             if self._get_bucket_batch_size() > 0 and type(dataset) == circuits_dataset.CircuitsConfigDataset:
-                perm = torch.randperm(dataset.x.shape[0]).cpu()
-                dataset.x = dataset.x[perm]
-                dataset.y = dataset.y[perm]
-                dataset.z = dataset.z[perm]
-
                 order = torch.argsort(dataset.z[:, 0], stable=True).cpu()
                 dataset.x = dataset.x[order]
                 dataset.y = dataset.y[order]
@@ -488,7 +483,7 @@ class DatasetLoader:
                 dataset = self.combine_datasets(
                     [dataset],
                     model_scale_factor=4,
-                    balance_maxes=[int(1e8)],
+                    balance_maxes=[None],
                     pad_constant=len(dataset.gate_pool) + 1,
                     device=self.device,
                     bucket_batch_size=self._get_bucket_batch_size(),
@@ -519,7 +514,11 @@ class DatasetLoader:
             dataset = self.combine_datasets(
                 datasets,
                 model_scale_factor=4,
-                balance_maxes=[int(1e8)] * len(datasets),
+                balance_maxes=(
+                    [None] * len(datasets)
+                    if self._get_bucket_batch_size() > 0
+                    else [int(1e8)] * len(datasets)
+                ),
                 pad_constant=len(datasets[0].gate_pool) + 1,
                 device=self.device,
                 bucket_batch_size=self._get_bucket_batch_size(),
