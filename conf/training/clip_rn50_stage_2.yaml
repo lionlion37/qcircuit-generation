@@ -1,0 +1,63 @@
+general:
+  output_path: ./models/trained/
+  model_name: clip_rn50x4_stage_2
+  experiment_name: clip_rn50_stage_2
+  init_from_pipeline_dir: ./models/trained/clip_rn50_stage_1
+  dataset: ./datasets/qc_srv_dataset_3to8qubit  # srv_3q through srv_8q combined
+  njobs: 8
+  device: auto
+  resume: false
+  verbose: true
+
+model:
+  type: QC_Cond_UNet
+  save_type: pt
+  params:
+    model_features: [128, 128, 256]
+    clr_dim: 4            # d = N+2 = 4 for gate pool ['h', 'cx']
+    num_clrs: 4           # overridden by setup_model to len(gate_pool)+2
+    t_emb_size: 256
+    cond_emb_size: 512
+    num_heads: [8, 8, 2]
+    num_res_blocks: [2, 2, 4]
+    transformer_depths: [1, 2, 1]
+
+training:
+  padding_mode: bucket
+  learning_rate: 5e-5
+  optimizer: Adam
+  loss: MSELoss
+  num_epochs: 50
+  batch_size: 256
+  enable_guidance_train: true
+  guidance_train_p: 0.1
+  cached_text_enc: true
+  ckpt_path: ./models/cp_saves/clip_rn50_stage_2/
+  ckpt_interval: 5
+  wandb:
+    enable: true
+    project: qcircuit-generation
+    run_name: paper_srv_reproduction
+
+text_encoder:
+  type: CachedFrozenOpenCLIPEmbedder
+  params:
+    arch: RN50
+    version: null
+    max_length: 77
+    freeze: true
+    layer: penultimate
+    enable_cache_token_limit: true
+    local_weights_path: null
+    cloob_weights_path: "./models/encoders/clip_rn50_yfcc_epoch_28.pt"
+
+scheduler:
+  type: DDIMScheduler
+  params:
+    num_train_timesteps: 1000
+    beta_start: 0.0001
+    beta_end: 0.02
+    beta_schedule: cos_alpha
+    input_perturbation: 0.1
+    prediction_type: epsilon
+    eta: 1
