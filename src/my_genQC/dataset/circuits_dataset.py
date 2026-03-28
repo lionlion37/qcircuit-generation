@@ -198,6 +198,8 @@ class MixedCircuitsConfigDataset(CircuitsConfigDataset, MixedCachedOpenCLIPDatas
         assert len(extras) == len(extra_keys), f"{len(extras)=} != {len(extra_keys)=}"
         extras_by_key = {key: value for key, value in zip(extra_keys, extras)}
         z = extras_by_key.pop("z", None)
+        if z is not None:
+            z = z.to(device)
         c = [extras_by_key[key] for key in extra_keys if key != "z"]
 
         x = x.to(device)    # [b, s, t]   
