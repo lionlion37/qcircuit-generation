@@ -16,7 +16,7 @@ model:
     clr_dim: 4            # d = N+2 = 4 for gate pool ['h', 'cx']
     num_clrs: 4           # overridden by setup_model to len(gate_pool)+2
     t_emb_size: 256
-    cond_emb_size: 512
+    cond_emb_size: 620
     num_heads: [8, 8, 2]
     num_res_blocks: [2, 2, 4]
     transformer_depths: [1, 2, 1]
