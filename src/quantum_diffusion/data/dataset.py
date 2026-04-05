@@ -223,7 +223,7 @@ class DatasetGenerator:
                     if balance_after_generation:
                         dataset.add_balance_fn = partial(
                             add_balance_fn_quantile_qc_length,
-                            padding_token=dataset_params["pad_constant"],
+                            padding_token=0,  # raw circuits coming from generate_circuit_dataset() are padded with 0 based on the tokenizer
                             balance_quantile=balance_quantile,
                             device=torch.device(self.device),
                         )

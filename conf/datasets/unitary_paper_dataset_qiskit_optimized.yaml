@@ -25,15 +25,15 @@
 
 gate_set: ['h', 'cx', 'z', 'x', 'ccx', 'swap']
 num_qubits: 3
-num_samples: 2500000  # paper reports 2.5M distinct training circuits after post-processing
+num_samples: 4000000  # paper reports 2.5M distinct training circuits after post-processing
 min_gates: 2
 max_gates: 12
 condition_type: UNITARY
 backbone: qiskit
 optimized: true
 balance_after_generation: true
-balance_max: 100000000  # permissive cap; tune to match the paper's final post-balanced size more closely
+balance_max: 60000  # permissive cap; tune to match the paper's final post-balanced size more closely
 balance_quantile: 0.25
 device: auto
-n_jobs: 4
+n_jobs: 12
 output_path: ./datasets/paper_qiskit/unitary_3q_dataset
