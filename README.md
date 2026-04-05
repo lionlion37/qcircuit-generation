@@ -3,7 +3,7 @@
 Hydra-driven scripts for quantum circuit dataset generation, diffusion-model training, and evaluation. The repository vendors the genQC stack in `src/my_genQC` and ships a stabilizer backend in `quditkit-main_schmidt` so runs are self-contained.
 
 ## Setup
-- Python 3.10+ recommended; use a virtual environment.
+- Python 3.10-3.13 recommended; Hydra 1.3.x currently crashes on Python 3.14 during CLI setup, so keep the project on 3.12/3.13.
 - Install dependencies with `pip install -r requirements.txt`. For the bundled qudit stabilizer backend, also run `pip install -r quditkit-main_schmidt/requirements.txt` and `pip install -e quditkit-main_schmidt` (mirrors the `make env` target).
 - Run commands from the repo root so `src/` is on `sys.path`. Hydra writes to `outputs/<date>/<time>`; add `hydra.run.dir=. hydra.output_subdir=null` to keep artifacts beside the repo.
 
