@@ -240,8 +240,10 @@ class DatasetGenerator:
                             balance_maxes=[effective_balance_max],
                             pad_constant=dataset_params["pad_constant"],
                             device=self.device,
-                            bucket_batch_size=self._get_bucket_batch_size(),
+                            # no need for explicit bucket pad, since for unitary compilation we only have one qubit size in the dataset
+                            bucket_batch_size=-1,  
                             max_samples=[int(1e8)],
+                            test_split=0,
                             **parameters,
                         )
                     )

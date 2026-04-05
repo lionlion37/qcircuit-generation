@@ -1,0 +1,72 @@
+# Training config for the paper-style unitary-compilation task:
+# "Quantum circuit synthesis with diffusion models"
+# (arxiv:2311.02041, Fürrutter et al., Nature Machine Intelligence 2024)
+#
+# This follows the SRV paper config conventions, but uses the single-stage
+# compilation model and the paper-style 3-qubit unitary dataset.
+
+general:
+  output_path: ./models/trained/
+  model_name: paper_unitary
+  experiment_name: paper_unitary
+  dataset: ./datasets/paper_qiskit/unitary_3q_dataset
+  njobs: 8
+  device: auto
+  verbose: true
+
+model:
+  type: QC_Compilation_UNet
+  save_type: pt
+  params:
+    model_features: [128, 128, 256]
+    clr_dim: 8            # d = N+2 = 8 for gate pool ['h', 'cx', 'z', 'x', 'ccx', 'swap']
+    num_clrs: 8           # overridden by setup_model to len(gate_pool)+2
+    t_emb_size: 256
+    cond_emb_size: 512
+    num_heads: [8, 8, 2]
+    num_res_blocks: [2, 2, 4]
+    transformer_depths: [1, 2, 1]
+    unitary_encoder_config:
+      cond_emb_size: 512
+      model_features: [2, 128, 256, 512]
+      num_heads: 8
+      transformer_depths: [4, 4]
+      dropout: 0.1
+
+training:
+  learning_rate: 3e-4
+  optimizer: Adam
+  loss: MSELoss
+  num_epochs: 75
+  batch_size: 256
+  enable_guidance_train: true
+  guidance_train_p: 0.1
+  cached_text_enc: true
+  ckpt_path: ./models/cp_saves/paper_unitary/
+  ckpt_interval: 5
+  wandb:
+    enable: true
+    project: qcircuit-generation
+    run_name: paper_unitary_reproduction
+
+text_encoder:
+  type: CachedFrozenOpenCLIPEmbedder
+  params:
+    arch: ViT-B-32
+    version: null  # set to null to avoid downloading from HuggingFace
+    max_length: 77
+    freeze: true
+    layer: penultimate
+    enable_cache_token_limit: true
+    local_weights_path: "./models/encoders/open_clip_ViT-B-32_laion2b_s34b_b79k.bin"
+
+scheduler:
+  type: DDIMScheduler
+  params:
+    num_train_timesteps: 1000
+    beta_start: 0.0001
+    beta_end: 0.02
+    beta_schedule: cos_alpha
+    input_perturbation: 0.1
+    prediction_type: epsilon
+    eta: 1
