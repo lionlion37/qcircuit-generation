@@ -160,6 +160,38 @@ class Pipeline(PipelineIO):
             return torch.zeros((), device=self.device, dtype=torch.float32)
         return torch.sqrt(sq_sum)
 
+    def _compute_named_module_weight_norm(self, module_name: str):
+        sq_sum = torch.zeros((), device=self.device, dtype=torch.float32)
+        has_param = False
+
+        prefix = f"{module_name}."
+        for name, p in self.model.named_parameters():
+            if name != module_name and not name.startswith(prefix):
+                continue
+            has_param = True
+            sq_sum = sq_sum + torch.sum(p.detach().float().pow(2))
+
+        if not has_param:
+            return torch.zeros((), device=self.device, dtype=torch.float32)
+        return torch.sqrt(sq_sum)
+
+    def _compute_named_module_grad_norm(self, module_name: str):
+        sq_sum = torch.zeros((), device=self.device, dtype=torch.float32)
+        has_grad = False
+
+        prefix = f"{module_name}."
+        for name, p in self.model.named_parameters():
+            if name != module_name and not name.startswith(prefix):
+                continue
+            if p.grad is None:
+                continue
+            has_grad = True
+            sq_sum = sq_sum + torch.sum(p.grad.detach().float().pow(2))
+
+        if not has_grad:
+            return torch.zeros((), device=self.device, dtype=torch.float32)
+        return torch.sqrt(sq_sum)
+
     def _compute_grad_norm_emb_clr(self):
         sq_sum = torch.zeros((), device=self.device, dtype=torch.float32)
         has_grad = False
@@ -192,6 +224,13 @@ class Pipeline(PipelineIO):
                 "grad_norm": self._compute_grad_norm().item(),
                 "grad_norm_emb_clr": self._compute_grad_norm_emb_clr().item(),
             }
+            if hasattr(self.model, "unitary_encoder"):
+                self.last_train_stats["weight_norm_unitary_encoder"] = (
+                    self._compute_named_module_weight_norm("unitary_encoder").item()
+                )
+                self.last_train_stats["grad_norm_unitary_encoder"] = (
+                    self._compute_named_module_grad_norm("unitary_encoder").item()
+                )
 
             # torch.nn.utils.clip_grad_norm_(self.model.parameters(), 1)
             
