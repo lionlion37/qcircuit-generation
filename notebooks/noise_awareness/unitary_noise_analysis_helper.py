@@ -154,7 +154,7 @@ def collect_candidate_tables(
                 guidance_scale=guidance_scale,
                 auto_batch_size=auto_batch_size,
             )
-            decoded = decode_candidate_tensors(dataset, tensors_out.cpu(), params_out.cpu())
+            decoded = decode_candidate_tensors(dataset, tensors_out.cpu(), None if params_out is None else params_out.cpu())
             for sample_rank, (sample_tensor, qc) in enumerate(zip(tensors_out.cpu(), decoded)):
                 if qc is None:
                     candidate_rows.append(
