@@ -61,6 +61,8 @@ def main(cfg):
     for condition_name, metadata in generation_results.items():
         print(f"  {condition_name}: {metadata['output_path']}")
     print(f"Gate set: {cfg['gate_set']}")
+    if "generation_gate_set" in cfg and cfg["generation_gate_set"] is not None:
+        print(f"Generation gate set: {cfg['generation_gate_set']}")
     print(f"Number of qubits: {cfg['num_qubits']}")
     print(f"Number of samples: {cfg['num_samples']}")
     print(f"Gate range: {cfg['min_gates']}-{cfg['max_gates']}")

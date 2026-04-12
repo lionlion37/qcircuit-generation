@@ -7,6 +7,7 @@ import copy
 import numpy as np
 from pathlib import Path
 from typing import Dict, List, Optional, Union, Any
+from dataclasses import asdict
 import yaml
 from tqdm import tqdm
 from omegaconf import OmegaConf
@@ -72,6 +73,58 @@ class DiffusionTrainer:
         self.model = None
         self.scheduler = None
         self.wandb_run = None
+
+    @staticmethod
+    def _dataset_gate_pool(dataset) -> list[str]:
+        return [str(gate) for gate in getattr(dataset, "gate_pool", [])]
+
+    @staticmethod
+    def _pipeline_gate_pool(pipeline) -> list[str]:
+        if hasattr(pipeline, "gate_pool"):
+            return [str(gate) for gate in getattr(pipeline, "gate_pool")]
+        return []
+
+    def _attach_dataset_metadata(self, dataset) -> None:
+        if not self.pipeline:
+            return
+
+        dataset_params = asdict(dataset.params_config)
+        self.pipeline.gate_pool = self._dataset_gate_pool(dataset)
+        self.pipeline.add_config = {
+            "dataset": {
+                "params": dataset_params,
+                "comment": getattr(dataset, "comment", ""),
+            }
+        }
+
+    def ensure_pipeline_dataset_compatibility(self, dataset) -> None:
+        if not self.pipeline:
+            return
+
+        dataset_gate_pool = self._dataset_gate_pool(dataset)
+        pipeline_gate_pool = self._pipeline_gate_pool(self.pipeline)
+
+        if pipeline_gate_pool and pipeline_gate_pool != dataset_gate_pool:
+            raise ValueError(
+                "Loaded pipeline gate_pool does not match dataset gate_pool: "
+                f"{pipeline_gate_pool} != {dataset_gate_pool}"
+            )
+
+        expected_num_clrs = len(dataset_gate_pool) + 2
+        model_num_clrs = getattr(self.pipeline.model, "num_clrs", None)
+        embedder_num_clrs = getattr(self.pipeline.embedder, "num_clrs", None)
+
+        if model_num_clrs is not None and model_num_clrs != expected_num_clrs:
+            raise ValueError(
+                f"Loaded model num_clrs={model_num_clrs} does not match dataset gate_pool size "
+                f"{len(dataset_gate_pool)} (expected {expected_num_clrs})."
+            )
+
+        if embedder_num_clrs is not None and embedder_num_clrs != expected_num_clrs:
+            raise ValueError(
+                f"Loaded embedder num_clrs={embedder_num_clrs} does not match dataset gate_pool size "
+                f"{len(dataset_gate_pool)} (expected {expected_num_clrs})."
+            )
 
     def setup_model(self, dataset, text_encoder, tokenizer: Optional = None) -> None:
         """Setup the diffusion model and related components.
@@ -168,6 +221,7 @@ class DiffusionTrainer:
                 guidance_train_p=training_config.get("guidance_train_p", 0.1),
                 cached_text_enc=training_config.get("cached_text_enc", True),
             )
+            self._attach_dataset_metadata(dataset)
             self.logger.info(
                 f"model.emb_clr.requires_grad={self.pipeline.model.emb_clr.weight.requires_grad}"
             )

@@ -83,6 +83,8 @@ def main(cfg):
             trainer.model = trainer.pipeline.model
             trainer.scheduler = trainer.pipeline.scheduler
             trainer.pipeline.text_encoder = dataset_loader.text_encoder
+            trainer.ensure_pipeline_dataset_compatibility(dataset)
+            trainer._attach_dataset_metadata(dataset)
 
         else:
             logger.info("Setting up diffusion model...")

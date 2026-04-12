@@ -15,6 +15,12 @@ How `scripts/train_model.py` trains a genQC diffusion model using Hydra configs 
 6) **Train**: `pipeline.fit` runs for `training.num_epochs`, driven by the dataloaders; ExperimentLogger tracks steps/metrics.
 7) **Persist**: `DiffusionTrainer.save_model` writes the pipeline checkpoint/config to `general.output_path[/model_name]`, plus `training_config.yaml` and `metadata.yaml`. `ModelManager` can register the run in-memory for later reference.
 
+## Curriculum Finetuning
+- The unitary curriculum flow uses two ordinary training presets rather than a dedicated runner.
+- Stage 1 trains from scratch on a dataset whose stored `gate_pool` is already the final full vocabulary.
+- Stage 2 sets `general.init_from_pipeline_dir` to the stage-1 checkpoint and resumes training on the full dataset.
+- Resume now validates that the loaded pipeline gate pool and `num_clrs` match the current dataset before training starts.
+
 ## Running it
 ```bash
 python scripts/train_model.py \

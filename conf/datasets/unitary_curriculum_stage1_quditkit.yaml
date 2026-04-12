@@ -1,0 +1,19 @@
+# Stage-1 curriculum dataset for unitary compilation.
+# Uses the final token vocabulary but excludes `ccx` from active generation
+# so the dataset can be generated efficiently with quditkit.
+
+gate_set: ['h', 'cx', 'z', 'x', 'ccx', 'swap']
+generation_gate_set: ['h', 'cx', 'z', 'x', 'swap']
+num_qubits: 3
+num_samples: 3000000
+min_gates: 2
+max_gates: 12
+condition_type: UNITARY
+backbone: quditkit
+optimized: false
+balance_after_generation: true
+balance_max: 60000
+balance_quantile: 0.25
+device: auto
+n_jobs: 12
+output_path: ./datasets/curriculum/unitary_stage1_quditkit

@@ -1,0 +1,17 @@
+# Stage-2 curriculum dataset for unitary compilation.
+# Reintroduces `ccx` and matches the final token vocabulary exactly.
+
+gate_set: ['h', 'cx', 'z', 'x', 'ccx', 'swap']
+num_qubits: 3
+num_samples: 500000
+min_gates: 2
+max_gates: 12
+condition_type: UNITARY
+backbone: qiskit
+optimized: true
+balance_after_generation: true
+balance_max: 60000
+balance_quantile: 0.25
+device: auto
+n_jobs: 12
+output_path: ./datasets/curriculum/unitary_stage2_qiskit

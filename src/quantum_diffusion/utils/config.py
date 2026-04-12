@@ -188,7 +188,7 @@ class ConfigManager:
         validation_rules = {
             "dataset": {
                 "required_keys": ["gate_set", "num_qubits", "num_samples"],
-                "optional_keys": ["min_gates", "max_gates", "condition_type"]
+                "optional_keys": ["min_gates", "max_gates", "condition_type", "generation_gate_set"]
             },
             "training": {
                 "required_keys": ["model", "training"],

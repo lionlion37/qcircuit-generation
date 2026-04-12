@@ -105,6 +105,7 @@ class DatasetGenerator:
         gate_set: List[str],
         num_qubits: int,
         num_samples: int,
+        generation_gate_set: Optional[List[str]] = None,
         min_gates: int = 2,
         max_gates: int = 16,
         backbone: str = "qiskit",
@@ -123,6 +124,7 @@ class DatasetGenerator:
 
         Args:
             gate_set: List of quantum gates to include
+            generation_gate_set: Optional ordered subset of gates to actively sample during generation
             num_qubits: Number of qubits in circuits
             num_samples: Number of circuits to generate
             min_gates: Minimum number of gates per circuit
@@ -140,6 +142,9 @@ class DatasetGenerator:
             f"Generating dataset with {num_samples} samples, {num_qubits} qubits"
         )
 
+        active_gate_set = self._resolve_generation_gate_set(
+            gate_set=gate_set, generation_gate_set=generation_gate_set
+        )
         vocabulary = {gate: idx for gate, idx in zip(gate_set, range(len(gate_set)))}
         output_root = Path(output_path)
         output_root.mkdir(parents=True, exist_ok=True)
@@ -177,6 +182,7 @@ class DatasetGenerator:
                     "num_of_qubits": num_qubits,
                     "min_gates": min_gates,
                     "max_gates": max_gates,
+                    "available_gate_pool": active_gate_set,
                     "optimized": optimized,
                     "post_randomize_params": False,  # TODO: change when switching to parameterized circuits
                     "n_jobs": n_jobs,
@@ -184,10 +190,10 @@ class DatasetGenerator:
 
                 if condition == CircuitConditionType.UNITARY:
                     generation_kwargs["min_sub_gate_pool_cnt"] = 2
-                    generation_kwargs["max_sub_gate_pool_cnt"] = len(gate_set)
+                    generation_kwargs["max_sub_gate_pool_cnt"] = len(active_gate_set)
                 else:
                     generation_kwargs["min_sub_gate_pool_cnt"] = 2
-                    generation_kwargs["fixed_sub_gate_pool"] = gate_set
+                    generation_kwargs["fixed_sub_gate_pool"] = active_gate_set
 
                 tensors, ys, Us, _params = generate_circuit_dataset(
                     **generation_kwargs,
@@ -211,6 +217,10 @@ class DatasetGenerator:
                 dataset = circuits_dataset.CircuitsConfigDataset(
                     device=self.device, **dataset_params
                 )
+                generation_comment = (
+                    f"generation_gate_set={active_gate_set}; token_gate_set={gate_set}"
+                )
+                dataset.comment = generation_comment
                 dataset.x = tensors
                 dataset.y = ys
 
@@ -247,6 +257,7 @@ class DatasetGenerator:
                             **parameters,
                         )
                     )
+                    mixed_dataset.comment = generation_comment
 
                 dataset_path = condition_output / "dataset" / "ds"
                 config_path = condition_output / "config.yaml"
@@ -273,6 +284,27 @@ class DatasetGenerator:
         except Exception as e:
             self.logger.error(f"Error generating dataset: {e}")
             raise
+
+    @staticmethod
+    def _resolve_generation_gate_set(
+        gate_set: List[str], generation_gate_set: Optional[List[str]]
+    ) -> List[str]:
+        active_gate_set = list(generation_gate_set or gate_set)
+
+        if not active_gate_set:
+            raise ValueError("generation_gate_set must not be empty.")
+
+        gate_set_lookup = set(gate_set)
+        if len(active_gate_set) != len(set(active_gate_set)):
+            raise ValueError("generation_gate_set must not contain duplicate gates.")
+
+        invalid = [gate for gate in active_gate_set if gate not in gate_set_lookup]
+        if invalid:
+            raise ValueError(
+                f"generation_gate_set must be an ordered subset of gate_set, got invalid gates {invalid}."
+            )
+
+        return active_gate_set
 
     def generate_multiple_datasets(self, configs: List[Dict]) -> List[Dict]:
         """Generate multiple datasets from a list of configurations.

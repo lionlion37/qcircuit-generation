@@ -65,6 +65,7 @@ def get_rnd_encoded_circuits(backend: BaseBackend,
                              num_of_qubits: int, 
                              min_gates: int, 
                              max_gates: int,                       
+                             available_gate_pool: Optional[Sequence[str]] = None,
                              min_sub_gate_pool_cnt: int = 1,
                              max_sub_gate_pool_cnt: Optional[int] = None,
                              fixed_sub_gate_pool: Optional[Sequence[str]] = None,
@@ -83,7 +84,7 @@ def get_rnd_encoded_circuits(backend: BaseBackend,
         raise NotImplementedError(f"Not implemented {condition}")
     
     sub_gate_pool = fixed_sub_gate_pool
-    gate_pool     = list(tokenizer.vocabulary)
+    gate_pool     = list(default(available_gate_pool, tokenizer.vocabulary))
 
     rng     = np.random.default_rng() 
     n       = len(gate_pool) + 1
@@ -202,6 +203,7 @@ def generate_circuit_dataset(backend: BaseBackend,
                              batch_samples: int = 128,  
                              n_jobs: int = 1,
                              unitary_dtype: torch.dtype = torch.float16,
+                             available_gate_pool: Optional[Sequence[str]] = None,
                              min_sub_gate_pool_cnt: int = 1,
                              max_sub_gate_pool_cnt: Optional[int] = None,
                              fixed_sub_gate_pool: Optional[Sequence[str]] = None,
@@ -238,6 +240,7 @@ def generate_circuit_dataset(backend: BaseBackend,
                                  num_of_qubits=num_of_qubits, 
                                  min_gates=min_gates, 
                                  max_gates=max_gates,
+                                 available_gate_pool=available_gate_pool,
                                  min_sub_gate_pool_cnt=min_sub_gate_pool_cnt,
                                  max_sub_gate_pool_cnt=max_sub_gate_pool_cnt,
                                  fixed_sub_gate_pool=fixed_sub_gate_pool,
