@@ -107,9 +107,10 @@ class Pipeline(PipelineIO):
         parameters = itertools.chain(*[trainable.parameters() for trainable in self.trainables]) 
         return parameters
     
-    def compile(self, optim_fn: type(torch.optim.Optimizer), loss_fn: Loss, metrics: Union[Metric, list[Metric]]=None, lr=None, cbs=None, compile_model=False, **kwargs):       
+    def compile(self, optim_fn: type(torch.optim.Optimizer), loss_fn: Loss, metrics: Union[Metric, list[Metric]]=None, lr=None, cbs=None, compile_model=False, max_grad_norm=None, **kwargs):
         self.loss_fn    = loss_fn()
-        self.optim_fn   = optim_fn 
+        self.optim_fn   = optim_fn
+        self.max_grad_norm = max_grad_norm
 
         if lr: self._reset_opt(lr, **kwargs)
         else: self.optimizer = None
@@ -232,8 +233,9 @@ class Pipeline(PipelineIO):
                     self._compute_named_module_grad_norm("unitary_encoder").item()
                 )
 
-            # torch.nn.utils.clip_grad_norm_(self.model.parameters(), 1)
-            
+            if self.max_grad_norm is not None:
+                torch.nn.utils.clip_grad_norm_(self.model.parameters(), self.max_grad_norm)
+
             #update weights
             self.optimizer.step()
     

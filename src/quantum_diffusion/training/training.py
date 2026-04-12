@@ -197,6 +197,7 @@ class DiffusionTrainer:
                 optim_fn=optimizer_fn,
                 loss_fn=loss_fn,
                 lr=training_config.get("learning_rate", 1e-4),
+                max_grad_norm=training_config.get("max_grad_norm", None),
             )
 
             self.logger.info("Model compiled for training")
@@ -250,10 +251,25 @@ class DiffusionTrainer:
                 cbs.append(WandbLoggingCallback(self.wandb_run))
                 self.pipeline.cbs = cbs
 
+            # Build LR scheduler factory if configured
+            lr_sched_fn = None
+            lr_sched_name = training_config.get("lr_scheduler", None)
+            if lr_sched_name == "OneCycleLR":
+                steps_per_epoch = len(dataloaders.train)
+                total_steps = num_epochs * steps_per_epoch
+                max_lr = training_config.get("learning_rate", 1e-4)
+                lr_sched_fn = lambda opt: torch.optim.lr_scheduler.OneCycleLR(
+                    opt, max_lr=max_lr, total_steps=total_steps
+                )
+                self.logger.info(
+                    f"Using OneCycleLR: max_lr={max_lr}, total_steps={total_steps}"
+                )
+
             # Train the model
             history = self.pipeline.fit(
                 num_epochs=num_epochs,
                 data_loaders=dataloaders,
+                lr_sched=lr_sched_fn,
                 ckpt_interval=self.config.training.ckpt_interval,
                 ckpt_path=self.config.training.ckpt_path,
             )
