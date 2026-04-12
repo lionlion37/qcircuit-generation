@@ -327,22 +327,47 @@ def sample_model_tensors_for_target(
     guidance_scale: float,
     auto_batch_size: int,
 ):
-    out = generate_compilation_tensors(
-        pipeline=pipeline,
-        prompt=[prompt],
-        U=target_unitary.unsqueeze(0),
-        samples=int(samples_per_target),
-        system_size=system_size,
-        num_of_qubits=num_qubits,
-        max_gates=max_gates,
-        g=float(guidance_scale),
-        auto_batch_size=int(auto_batch_size),
-        enable_params=True,
-        no_bar=True,
-    )
-    if not isinstance(out, tuple):
-        raise RuntimeError("Expected generate_compilation_tensors to return (tensors, params).")
-    return out
+    try:
+        out = generate_compilation_tensors(
+            pipeline=pipeline,
+            prompt=[prompt],
+            U=target_unitary.unsqueeze(0),
+            samples=int(samples_per_target),
+            system_size=system_size,
+            num_of_qubits=num_qubits,
+            max_gates=max_gates,
+            g=float(guidance_scale),
+            auto_batch_size=int(auto_batch_size),
+            enable_params=True,
+            no_bar=True,
+        )
+        if not isinstance(out, tuple):
+            raise RuntimeError(
+                "Expected generate_compilation_tensors to return (tensors, params)."
+            )
+        return out
+    except TypeError as err:
+        # Older / alternate embedders can expose an `invert(...)` signature without
+        # `reduce_spatial`. For the current unitary-compilation gate sets, parameter
+        # tensors are not required for decoding, so fall back to parameter-free output.
+        if "reduce_spatial" not in str(err):
+            raise
+        out = generate_compilation_tensors(
+            pipeline=pipeline,
+            prompt=[prompt],
+            U=target_unitary.unsqueeze(0),
+            samples=int(samples_per_target),
+            system_size=system_size,
+            num_of_qubits=num_qubits,
+            max_gates=max_gates,
+            g=float(guidance_scale),
+            auto_batch_size=int(auto_batch_size),
+            enable_params=False,
+            no_bar=True,
+        )
+        if isinstance(out, tuple):
+            return out[0], None
+        return out, None
 
 
 def timestamp_slug() -> str:
