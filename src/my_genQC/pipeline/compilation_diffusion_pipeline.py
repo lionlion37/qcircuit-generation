@@ -47,7 +47,7 @@ class DiffusionPipeline_Compilation(DiffusionPipeline):
         return super().denoising(latents, c, negative_c, enable_guidance, g, t_start_index=t_start_index, 
                                  no_bar=no_bar, return_predicted_x0=return_predicted_x0, U=U)
 
-    def denoising_step(self, latents: torch.Tensor, ts: Union[int, torch.IntTensor], c_emb: torch.Tensor=None, enable_guidance=False, g=7.5, U: torch.Tensor=None):    
+    def denoising_step(self, latents: torch.Tensor, ts: Union[int, torch.IntTensor], c_emb: torch.Tensor=None, enable_guidance=False, g=7.5, U: torch.Tensor=None, micro_cond=None):    
         if enable_guidance:
             x = torch.cat([latents] * 2)     #uses batch layer combine here
             
