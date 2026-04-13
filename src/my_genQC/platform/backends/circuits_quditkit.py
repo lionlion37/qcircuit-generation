@@ -16,7 +16,6 @@ from qudit_sim.gate_class import Gate
 from qudit_sim.tableau import Tableau
 from qudit_sim.utils import *
 
-from qiskit import QuantumCircuit as QiskitCircuit
 from qiskit import transpile
 
 # def get_number_of_gate_params(gate_cls: type[Gate]) -> int:

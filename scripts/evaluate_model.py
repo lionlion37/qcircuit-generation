@@ -3,11 +3,8 @@
 
 from __future__ import annotations
 
-import argparse
 import sys
 import os
-import time
-import datetime
 import ast
 from collections import Counter
 from pathlib import Path
@@ -31,7 +28,6 @@ from my_genQC.platform.simulation import Simulator, CircuitBackendType
 from my_genQC.platform.tokenizer.circuits_tokenizer import CircuitTokenizer
 from my_genQC.utils.misc_utils import infer_torch_device, get_entanglement_bins
 from my_genQC.dataset import circuits_dataset
-from my_genQC.models.config_model import ConfigModel
 from my_genQC.utils.config_loader import load_config, store_tensor
 
 
@@ -238,13 +234,12 @@ def main(cfg):
         # Save output for further inspection after run
         if cfg.save_output:
             if cfg.save_folder:
-                timestamp = datetime.datetime.now().strftime("%D-%T")
                 try:
                     save_path = os.path.join(
                         cfg.save_folder, f"{num_qubits}q_{samples}_samples.pt"
-                    )  # _{timestamp}.pt")
+                    )
                     store_tensor(tensors_out, save_path)
-                except:
+                except Exception:
                     pass
             else:
                 raise Warning(

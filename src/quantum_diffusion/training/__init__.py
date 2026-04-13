@@ -2,4 +2,4 @@
 
 from .training import DiffusionTrainer, ModelManager
 
-__all__ = ['DiffusionTrainer', 'ModelManager']
+__all__ = ["DiffusionTrainer", "ModelManager"]

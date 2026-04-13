@@ -17,8 +17,8 @@ class CircuitTokenizer(BaseTokenizer):
 
     def __init__(self, vocabulary: Vocabulary, sign_labels: Optional[dict[str, int]] = None) -> None:   
         if 0 in vocabulary.values():        
-            print(f"[WARNING]: The value 0 is reserved for background tokens, i.e. qubit time position which are not effected by gates.")
-            print(f"[WARNING]: Automatically incrementing all vocabulary values by one ...")
+            print("[WARNING]: The value 0 is reserved for background tokens, i.e. qubit time position which are not effected by gates.")
+            print("[WARNING]: Automatically incrementing all vocabulary values by one ...")
             vocabulary = {k:v+1 for k,v in vocabulary.items()}
             assert 0 not in vocabulary.values()
         

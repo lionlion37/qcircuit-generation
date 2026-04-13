@@ -9,7 +9,6 @@ __all__ = ['check_duplicate_in_dataset', 'check_duplicates_in_dataset', 'shuffle
 # %% ../../src/dataset/dataset_helper.ipynb 2
 from ..imports import *
 from ..utils.config_loader import *
-from ..utils.async_fn import run_parallel_jobs
 
 # %% ../../src/dataset/dataset_helper.ipynb 4
 def check_duplicate_in_dataset(x, dataset):
@@ -143,7 +142,7 @@ def balance_tensor_dataset(x, y, *z, samples: int=None, make_unique: bool=True, 
         if y_type == np.ndarray: samples =    np.min(y_uniques_cnt)   # the actual balancing count
         else:                    samples = torch.min(y_uniques_cnt)
          
-    print(f" - balancing")
+    print(" - balancing")
     # ToDo: make parallel 
     
     ind = list()   

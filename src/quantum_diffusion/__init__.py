@@ -20,25 +20,23 @@ from .utils import ConfigManager, Logger, setup_logging
 # Make key classes easily accessible
 __all__ = [
     # Data
-    'DatasetGenerator',
-    'DatasetLoader', 
-    'PRESET_CONFIGS',
-    
+    "DatasetGenerator",
+    "DatasetLoader",
+    "PRESET_CONFIGS",
     # Models
-    'DiffusionTrainer',
-    'ModelManager',
-    'PRESET_TRAINING_CONFIGS',
-    'PRESET_TRAINING_CONFIGS',
-
+    "DiffusionTrainer",
+    "ModelManager",
+    "PRESET_TRAINING_CONFIGS",
+    "PRESET_TRAINING_CONFIGS",
     # Utils
-    'ConfigManager',
-    'Logger',
-    'setup_logging',
-    
+    "ConfigManager",
+    "Logger",
+    "setup_logging",
     # Package info
-    '__version__',
-    '__author__'
+    "__version__",
+    "__author__",
 ]
+
 
 # Package-level convenience functions
 def quick_start_tutorial():
@@ -79,25 +77,25 @@ def quick_start_tutorial():
     For more examples, check the notebooks/ directory!
     """)
 
+
 def create_example_project(project_path: str = "./quantum_diffusion_example"):
     """Create an example project structure with sample files.
-    
+
     Args:
         project_path: Path where to create the example project
     """
     from pathlib import Path
-    import shutil
-    
+
     project_dir = Path(project_path)
     project_dir.mkdir(parents=True, exist_ok=True)
-    
+
     # Create directory structure
     (project_dir / "datasets").mkdir(exist_ok=True)
     (project_dir / "models").mkdir(exist_ok=True)
     (project_dir / "evaluation").mkdir(exist_ok=True)
     (project_dir / "configs").mkdir(exist_ok=True)
     (project_dir / "logs").mkdir(exist_ok=True)
-    
+
     # Create example script
     example_script = '''#!/usr/bin/env python3
 """Example script for quantum diffusion workflow."""
@@ -149,12 +147,12 @@ def main():
 if __name__ == "__main__":
     main()
 '''
-    
-    with open(project_dir / "example_workflow.py", 'w') as f:
+
+    with open(project_dir / "example_workflow.py", "w") as f:
         f.write(example_script)
-    
+
     # Create README
-    readme_content = '''# Quantum Diffusion Example Project
+    readme_content = """# Quantum Diffusion Example Project
 
 This is an example project created by the QuantumDiffusion framework.
 
@@ -186,10 +184,10 @@ This is an example project created by the QuantumDiffusion framework.
    ```
 
 For more information, see the main QuantumDiffusion documentation.
-'''
-    
-    with open(project_dir / "README.md", 'w') as f:
+"""
+
+    with open(project_dir / "README.md", "w") as f:
         f.write(readme_content)
-    
+
     print(f"Example project created at: {project_dir}")
     print("Run 'python example_workflow.py' to test the full workflow!")

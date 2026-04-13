@@ -12,7 +12,12 @@ import yaml
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 DEFAULT_ROOT = REPO_ROOT / "artifacts" / "models"
-KNOWN_WEIGHT_FILES = {"model.pt", "embedder.pt", "text_encoder.pt", "circuit_encoder.pt"}
+KNOWN_WEIGHT_FILES = {
+    "model.pt",
+    "embedder.pt",
+    "text_encoder.pt",
+    "circuit_encoder.pt",
+}
 
 
 def to_repo_relative(path: Path) -> str:

@@ -4,29 +4,17 @@
 #------------------------------------
 # Python
 
-import math, itertools, functools, copy, asyncio, time, importlib, datetime, importlib, \
-        os, dataclasses, platform, sys, subprocess, pathlib, ast, weakref, enum, abc, \
-        typing, random
 
-from datetime import datetime
-from PIL import Image
-from dataclasses import dataclass, asdict, is_dataclass
-from typing import Union, Optional, TypeVar, Callable, Any, List, Tuple, Iterable, Sequence
 
 
 import numpy as np
 np.set_printoptions(edgeitems=40, linewidth=200, formatter=dict(float=lambda x: "%.3g" % x))
 
-import scipy
-import matplotlib.pyplot as plt
 
 #------------------------------------
 # PyTorch
 
 import torch
-import torch.nn as nn
-import torch.nn.functional as F
-from torch.utils.data import DataLoader, TensorDataset
 
 torch.set_printoptions(linewidth=200)
 
@@ -36,7 +24,6 @@ torch.set_printoptions(linewidth=200)
 def in_colab():
     "Check if the code is running in Google Colaboratory"
     try:
-        from google import colab
         return True
     except: return False
 
@@ -56,14 +43,14 @@ def in_notebook():
 IN_NOTEBOOK = in_notebook()
 
 if IN_NOTEBOOK: 
-    from tqdm.notebook import trange, tqdm
+    pass
 else: 
-    from tqdm import trange, tqdm
+    pass
 
 #------------------------------------
 # Python commons
 
-from inspect import isfunction, ismethod
+from inspect import isfunction
 
 def exists(val): 
     return val is not None

@@ -12,8 +12,6 @@ from .cached_dataset import CachedOpenCLIPDataset, CachedOpenCLIPDatasetConfig
 from .mixed_cached_dataset import MixedCachedOpenCLIPDataset, MixedCachedOpenCLIPDatasetConfig
 from ..utils.config_loader import *
 from .config_dataset import ConfigDataset
-from .dataset_helper import shuffle_tensor_dataset
-from ..utils.misc_utils import MemoryCleaner
 
 # %% ../../src/dataset/circuits_dataset.ipynb 4
 @dataclass
@@ -45,7 +43,7 @@ class CircuitsConfigDataset(CachedOpenCLIPDataset):
                 self.gate_pool = [get_obj_from_str(node) for node in parameters["gate_pool"]]   
             except Exception as er:
                 print(f"[WARNING]: error => {er}")
-                print(f"[WARNING]: gate_pool is passed as str")
+                print("[WARNING]: gate_pool is passed as str")
                 self.gate_pool = [str(node) for node in parameters["gate_pool"]]   
     
     @property

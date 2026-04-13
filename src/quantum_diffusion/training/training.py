@@ -4,12 +4,10 @@ import os
 import time
 import torch
 import copy
-import numpy as np
 from pathlib import Path
-from typing import Dict, List, Optional, Union, Any
+from typing import Dict, List, Optional, Any
 from dataclasses import asdict
 import yaml
-from tqdm import tqdm
 from omegaconf import OmegaConf
 
 from my_genQC.pipeline.compilation_diffusion_pipeline import (
@@ -18,7 +16,6 @@ from my_genQC.pipeline.compilation_diffusion_pipeline import (
 from my_genQC.pipeline.diffusion_pipeline import DiffusionPipeline
 from my_genQC.scheduler.scheduler_ddim import DDIMScheduler
 from my_genQC.models.unet_qc import QC_Compilation_UNet, QC_Cond_UNet
-from my_genQC.models.config_model import ConfigModel
 from my_genQC.models.unitary_encoder import Unitary_encoder_config
 from my_genQC.platform.tokenizer.circuits_tokenizer import CircuitTokenizer
 from my_genQC.utils.misc_utils import infer_torch_device
@@ -318,9 +315,12 @@ class DiffusionTrainer:
                 steps_per_epoch = len(dataloaders.train)
                 total_steps = num_epochs * steps_per_epoch
                 max_lr = training_config.get("learning_rate", 1e-4)
-                lr_sched_fn = lambda opt: torch.optim.lr_scheduler.OneCycleLR(
-                    opt, max_lr=max_lr, total_steps=total_steps
-                )
+
+                def lr_sched_fn(opt):
+                    return torch.optim.lr_scheduler.OneCycleLR(
+                        opt, max_lr=max_lr, total_steps=total_steps
+                    )
+
                 self.logger.info(
                     f"Using OneCycleLR: max_lr={max_lr}, total_steps={total_steps}"
                 )
@@ -396,7 +396,9 @@ class DiffusionTrainer:
             return DiffusionPipeline.from_pretrained(repo_id=repo_id, device=device)
 
         if not model_dir:
-            raise ValueError("Provide either a model directory or a Hugging Face repo id.")
+            raise ValueError(
+                "Provide either a model directory or a Hugging Face repo id."
+            )
 
         model_dir = Path(model_dir).resolve()
         config_path = model_dir if model_dir.is_dir() else model_dir.parent

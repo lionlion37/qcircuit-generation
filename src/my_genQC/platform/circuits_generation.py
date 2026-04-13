@@ -8,7 +8,7 @@ __all__ = ['CircuitConditionType', 'get_rnd_encoded_circuit', 'get_rnd_encoded_c
 # %% ../../src/platform/circuits_generation.ipynb 2
 from ..imports import *
 from .backends.base_backend import BaseBackend
-from .tokenizer.circuits_tokenizer import CircuitTokenizer, Vocabulary
+from .tokenizer.circuits_tokenizer import CircuitTokenizer
 from ..dataset.dataset_helper import get_unique_elements_indices
 from ..utils.async_fn import MemoryMappedArray, Parallel, delayed
 

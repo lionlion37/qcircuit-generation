@@ -1,7 +1,8 @@
 from __future__ import annotations
 import numpy as np
 from numba import njit, set_num_threads
-import os, multiprocessing as mp
+import os
+import multiprocessing as mp
 
 
 GATE_I = 0

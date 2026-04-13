@@ -7,7 +7,7 @@ __all__ = ['GatePairTokenizer', 'sort_config', 'get_topk_depth_unpacked']
 
 # %% ../../../src/platform/tokenizer/tensor_tokenizer.ipynb 2
 from ...imports import *
-from .base_tokenizer import BaseTokenizer, Vocabulary
+from .base_tokenizer import BaseTokenizer
 
 # %% ../../../src/platform/tokenizer/tensor_tokenizer.ipynb 4
 class GatePairTokenizer(BaseTokenizer):

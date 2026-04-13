@@ -7,7 +7,6 @@ __all__ = ['BaseNorm', 'UnitaryFrobeniusNorm', 'UnitaryInfidelityNorm']
 
 # %% ../../src/inference/eval_metrics.ipynb 2
 from ..imports import *
-from scipy.stats import unitary_group
 
 # %% ../../src/inference/eval_metrics.ipynb 4
 class BaseNorm(abc.ABC): 

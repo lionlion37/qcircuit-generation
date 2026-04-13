@@ -2,16 +2,13 @@
 
 import os
 import time
-import sys
 import copy
 import torch
-import numpy as np
 from functools import partial
 from pathlib import Path
 from dataclasses import asdict
-from typing import Dict, List, Optional, Union, Tuple, Any, Iterable
+from typing import Dict, List, Optional, Union, Any, Iterable
 import yaml
-from tqdm import tqdm
 
 # Assuming genQC imports (adjust paths as needed)
 from my_genQC.platform.circuits_generation import (
@@ -251,7 +248,7 @@ class DatasetGenerator:
                             pad_constant=dataset_params["pad_constant"],
                             device=self.device,
                             # no need for explicit bucket pad, since for unitary compilation we only have one qubit size in the dataset
-                            bucket_batch_size=-1,  
+                            bucket_batch_size=-1,
                             max_samples=[int(1e8)],
                             test_split=0,
                             **parameters,
@@ -318,7 +315,7 @@ class DatasetGenerator:
         results = []
         for i, config in enumerate(configs):
             self.logger.info(f"Generating dataset {i + 1}/{len(configs)}")
-            result = self.generate_dataset(backbone=Quantum, **config)
+            result = self.generate_dataset(**config)
             results.append(result)
         return results
 
@@ -358,7 +355,9 @@ class DatasetLoader:
     def _infer_z_from_x(self, dataset) -> torch.Tensor:
         x = dataset.x
         if not isinstance(x, torch.Tensor) or x.ndim != 3:
-            raise ValueError("Expected dataset.x to be a rank-3 tensor [batch, qubits, time].")
+            raise ValueError(
+                "Expected dataset.x to be a rank-3 tensor [batch, qubits, time]."
+            )
 
         pad_constant = getattr(
             dataset.params_config, "pad_constant", len(dataset.gate_pool) + 1
@@ -398,22 +397,16 @@ class DatasetLoader:
         has_unitary = "U" in dataset.store_dict
         has_params = "params" in dataset.store_dict
         if has_unitary and has_params:
-            dataset.collate_fn = (
-                circuits_dataset.MixedCircuitsConfigDataset.cut_padding_Bucket_collate_fn_compilation_params.__name__
-            )
+            dataset.collate_fn = circuits_dataset.MixedCircuitsConfigDataset.cut_padding_Bucket_collate_fn_compilation_params.__name__
         elif has_unitary:
-            dataset.collate_fn = (
-                circuits_dataset.MixedCircuitsConfigDataset.cut_padding_Bucket_collate_fn_compilation.__name__
-            )
+            dataset.collate_fn = circuits_dataset.MixedCircuitsConfigDataset.cut_padding_Bucket_collate_fn_compilation.__name__
         else:
-            dataset.collate_fn = (
-                circuits_dataset.MixedCircuitsConfigDataset.cut_padding_Bucket_collate_fn.__name__
-            )
+            dataset.collate_fn = circuits_dataset.MixedCircuitsConfigDataset.cut_padding_Bucket_collate_fn.__name__
 
     def _ignore_persisted_z_for_plain_dataset(self, dataset) -> None:
         if (
             self._get_bucket_batch_size() > 0
-            or type(dataset) != circuits_dataset.CircuitsConfigDataset
+            or not isinstance(dataset, circuits_dataset.CircuitsConfigDataset)
             or "z" not in dataset.store_dict
         ):
             return
@@ -509,7 +502,9 @@ class DatasetLoader:
             )
 
             # bucket padding expects a MixedCircuitsDataset, so we have to convert to that
-            if self._get_bucket_batch_size() > 0 and type(dataset) == circuits_dataset.CircuitsConfigDataset:
+            if self._get_bucket_batch_size() > 0 and isinstance(
+                dataset, circuits_dataset.CircuitsConfigDataset
+            ):
                 order = torch.argsort(dataset.z[:, 0], stable=True).cpu()
                 dataset.x = dataset.x[order]
                 dataset.y = dataset.y[order]

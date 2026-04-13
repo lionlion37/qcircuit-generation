@@ -9,8 +9,6 @@ __all__ = ['instruction_name_to_pennylane_name', 'ParametrizedPennylaneCircuit',
 from ...imports import *
 from .base_backend import BaseBackend
 from ..circuits_instructions import CircuitInstructions
-from ..tokenizer.base_tokenizer import Vocabulary
-from ...utils.config_loader import get_obj_from_str
 
 import pennylane as qml
 import pennylane.ops as pennylane_ops

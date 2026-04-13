@@ -63,17 +63,12 @@ def format_text(registry: dict) -> str:
         lines.append(f"[{experiment['id']}] {experiment['title']}")
         lines.append(f"  Declared status: {experiment['status']['overall']}")
         lines.append(f"  Thesis goal: {experiment['thesis_goal']}")
+        lines.append(f"  Configs: {len(existing_configs)}/{len(config_paths)} present")
         lines.append(
-            "  Configs: "
-            f"{len(existing_configs)}/{len(config_paths)} present"
+            f"  Evidence: {len(existing_evidence)}/{len(evidence_paths)} present"
         )
         lines.append(
-            "  Evidence: "
-            f"{len(existing_evidence)}/{len(evidence_paths)} present"
-        )
-        lines.append(
-            "  Artifacts: "
-            f"{len(existing_artifacts)}/{len(artifact_paths)} present"
+            f"  Artifacts: {len(existing_artifacts)}/{len(artifact_paths)} present"
         )
 
         if missing_configs:

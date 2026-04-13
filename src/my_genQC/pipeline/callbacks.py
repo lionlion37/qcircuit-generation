@@ -5,7 +5,7 @@ __all__ = ['CancelFitException', 'CancelBatchException', 'CancelEpochException',
 
 # %% ../../src/pipeline/callbacks.ipynb 2
 from ..imports import *
-from operator import attrgetter, itemgetter
+from operator import attrgetter
 
 # %% ../../src/pipeline/callbacks.ipynb 4
 class CancelFitException(Exception): pass

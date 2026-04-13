@@ -12,9 +12,6 @@ from omegaconf import OmegaConf
 
 from safetensors.torch import load_file as load_safetensors
 from safetensors.torch import save_file as save_safetensors
-from safetensors.numpy import load_file as load_safetensors_np
-from safetensors.numpy import save_file as save_safetensors_np
-from safetensors import safe_open
 
 # %% ../../src/utils/config_loader.ipynb 5
 def class_to_str(cls):
@@ -52,8 +49,8 @@ def get_obj_from_str(string, reload=False, invalidate_cache=True):
 
 # %% ../../src/utils/config_loader.ipynb 15
 def instantiate_from_config(config):
-    if not "target" in config: raise KeyError("Expected key `target` to instantiate.")
-    if not "params" in config: print("[WARNING] Expected key `params` to instantiate.")
+    if "target" not in config: raise KeyError("Expected key `target` to instantiate.")
+    if "params" not in config: print("[WARNING] Expected key `params` to instantiate.")
     return get_obj_from_str(config["target"])(**config.get("params", dict()))
 
 # %% ../../src/utils/config_loader.ipynb 17

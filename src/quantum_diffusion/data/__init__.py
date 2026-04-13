@@ -2,4 +2,4 @@
 
 from .dataset import DatasetGenerator, DatasetLoader, PRESET_CONFIGS
 
-__all__ = ['DatasetGenerator', 'DatasetLoader', 'PRESET_CONFIGS']
+__all__ = ["DatasetGenerator", "DatasetLoader", "PRESET_CONFIGS"]

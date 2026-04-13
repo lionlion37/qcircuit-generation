@@ -1,12 +1,10 @@
 from __future__ import annotations
-from typing import Callable, Union, Dict, Tuple, Literal, Optional
+from typing import Union, Dict, Tuple, Literal, Optional
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
 import matplotlib as mpl
 from matplotlib import colors as mcolors
-from collections import Counter
 import copy
-import random
 import numpy as np
 from .backend import xp
 from . import backend

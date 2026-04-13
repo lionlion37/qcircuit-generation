@@ -9,7 +9,9 @@ __all__ = ['MemoryCleaner', 'virtual', 'cache_data', 'DataLoaders', 'infer_torch
 
 # %% ../../src/utils/misc_utils.ipynb 2
 from ..imports import *
-import gc, traceback, inspect
+import gc
+import traceback
+import inspect
 
 # %% ../../src/utils/misc_utils.ipynb 4
 class MemoryCleaner():
@@ -18,7 +20,7 @@ class MemoryCleaner():
     @staticmethod
     def _clean_ipython_hist():
         # Code in this function mainly copied from IPython source
-        if not 'get_ipython' in globals(): return
+        if 'get_ipython' not in globals(): return
         ip = get_ipython()
         user_ns = ip.user_ns
         ip.displayhook.flush()
@@ -98,7 +100,7 @@ def cache_data(file_name, force_recompute):
                 cache = func(*args, **kwargs)
                 
                 save(cache)
-                print(f"Result saved")
+                print("Result saved")
                 
             else: # loaded already from cache
                 print(f"Result retrieved from cache: {func.__name__}")

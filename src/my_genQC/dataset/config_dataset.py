@@ -316,7 +316,7 @@ class ConfigDataset():
         try:
             name = repo_id.split("/")[-1]
             dataset = cls.from_config_file(config_path=dataset_path+f"/{name}.yaml", device=device, save_path=dataset_path+f"/{name}")  
-        except Exception as e:
+        except Exception:
             dataset = cls.from_config_file(config_path=dataset_path+"/config.yaml", device=device, save_path=dataset_path+"/dataset")  
         
         return dataset 
