@@ -28,7 +28,11 @@ dependencies = [
     "wandb",
 ]
 
+[tool.ruff]
+exclude = ["src/my_genQC", "src/quditkit-main_schmidt"]
+
 [project.optional-dependencies]
 dev = [
     "pytest>=8.0",
+    "ruff>=0.4.0",
 ]
