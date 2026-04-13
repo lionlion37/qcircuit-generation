@@ -47,7 +47,6 @@ outputs/
 *.ckpt
 *.safetensors
 artifacts/
-datasets/
 models/
 scripts/models/
 scripts/outputs/
