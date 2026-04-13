@@ -57,7 +57,7 @@ python scripts/generate_dataset.py \
 python scripts/train_model.py \
   hydra.run.dir=. hydra.output_subdir=null \
   training=quick_test_srv \
-  training.general.dataset=./artifacts/datasets/srv-paper-datasets/qiskit \
+  training.general.dataset=./artifacts/datasets/srv-datasets/qiskit \
   training.general.output_path=./artifacts/models/quick_test
 ```
 If you supply a parent directory containing multiple datasets, the current script trims each to the first 1000 samples before combining (debug behavior in code).
@@ -68,7 +68,7 @@ If you supply a parent directory containing multiple datasets, the current scrip
 python scripts/evaluate_model.py \
   hydra.run.dir=. hydra.output_subdir=null \
   evaluation=default \
-  evaluation.dataset=./artifacts/datasets/srv-paper-datasets/quditkit/srv_3q_dataset \
+  evaluation.dataset=./artifacts/datasets/srv-datasets/quditkit/srv_3q_dataset \
   evaluation.model_dir=./artifacts/models/default/default_model_srv \
   evaluation.num_samples=256 \
   evaluation.model_params.guidance_scale=1.5
@@ -78,7 +78,7 @@ For a hosted pipeline, use the HF preset:
 python scripts/evaluate_model.py \
   hydra.run.dir=. hydra.output_subdir=null \
   evaluation=remote_model \
-  evaluation.dataset=./artifacts/datasets/srv-paper-datasets/qiskit/srv_8q_dataset \
+  evaluation.dataset=./artifacts/datasets/srv-datasets/qiskit/srv_8q_dataset \
   evaluation.model_dir=null
 ```
 

@@ -26,7 +26,7 @@ if str(SRC_ROOT) not in sys.path:
     sys.path.insert(0, str(SRC_ROOT))
 
 from my_genQC.dataset.config_dataset import ConfigDataset
-from notebooks.bucket_training_alignment_helper import (
+from notebooks.training.bucket_padding.bucket_training_alignment_helper import (
     DEFAULT_DATASET_ROOT,
     DEFAULT_TRAINING_CFG,
     count_nonpad_qubits,
@@ -35,7 +35,10 @@ from notebooks.bucket_training_alignment_helper import (
     load_prepared_bucket_dataset,
     round_up_to_multiple,
 )
-from notebooks.training_dataset_audit_helper import entanglement_bucket, parse_srv_label
+from notebooks.datasets.training_dataset_audit_helper import (
+    entanglement_bucket,
+    parse_srv_label,
+)
 
 
 def to_numpy_strings(values: Any) -> np.ndarray:

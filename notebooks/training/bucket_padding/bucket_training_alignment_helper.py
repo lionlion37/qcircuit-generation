@@ -17,10 +17,10 @@ except ModuleNotFoundError as exc:
     ) from exc
 
 
-REPO_ROOT = Path(__file__).resolve().parents[1]
+REPO_ROOT = Path(__file__).resolve().parents[3]
 SRC_ROOT = REPO_ROOT / "src"
-DEFAULT_TRAINING_CFG = REPO_ROOT / "conf" / "training" / "paper_srv_bucket.yaml"
-DEFAULT_DATASET_ROOT = REPO_ROOT / "datasets" / "qc_srv_dataset_3to8qubit"
+DEFAULT_TRAINING_CFG = REPO_ROOT / "conf" / "training" / "paper_stage_2.yaml"
+DEFAULT_DATASET_ROOT = REPO_ROOT / "artifacts" / "datasets" / "srv-datasets" / "qiskit"
 
 if str(SRC_ROOT) not in sys.path:
     sys.path.insert(0, str(SRC_ROOT))
