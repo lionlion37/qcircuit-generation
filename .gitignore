@@ -46,6 +46,7 @@ outputs/
 *.pth
 *.ckpt
 *.safetensors
+artifacts/
 datasets/
 models/
 scripts/models/
@@ -55,4 +56,3 @@ scripts/outputs/
 .mypy_cache/
 .pytest_cache/
 .cache/
-
