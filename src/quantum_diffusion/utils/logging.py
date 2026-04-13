@@ -103,7 +103,7 @@ class Logger:
 class ExperimentLogger:
     """Logger specifically for tracking experiments."""
     
-    def __init__(self, experiment_name: str, log_dir: str = "./logs"):
+    def __init__(self, experiment_name: str, log_dir: str = "./artifacts/logs"):
         """Initialize experiment logger.
         
         Args:
@@ -198,7 +198,7 @@ class ExperimentLogger:
 
 
 def setup_logging(log_level: str = "INFO", 
-                  log_dir: str = "./logs",
+                  log_dir: str = "./artifacts/logs",
                   console_output: bool = True) -> None:
     """Setup global logging configuration.
     

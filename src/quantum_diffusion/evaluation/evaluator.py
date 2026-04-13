@@ -83,7 +83,13 @@ class SRVEvaluator:
         self.logger.info("Setting up wandb...")
         project = wandb_cfg.get("project", "qcircuit-generation")
         run_name = wandb_cfg.get("run_name", wandb_cfg.get("experiment_name"))
-        return wandb.init(project=project, name=run_name, config=dict(self.config))
+        wandb_dir = wandb_cfg.get("dir", "./artifacts/wandb")
+        return wandb.init(
+            project=project,
+            name=run_name,
+            dir=wandb_dir,
+            config=dict(self.config),
+        )
 
     @staticmethod
     def _parse_srv_targets(labels: np.ndarray) -> torch.Tensor:
@@ -332,7 +338,13 @@ class UnitaryEvaluator:
         self.logger.info("Setting up wandb...")
         project = wandb_cfg.get("project", "qcircuit-generation")
         run_name = wandb_cfg.get("run_name", wandb_cfg.get("experiment_name"))
-        return wandb.init(project=project, name=run_name, config=dict(self.config))
+        wandb_dir = wandb_cfg.get("dir", "./artifacts/wandb")
+        return wandb.init(
+            project=project,
+            name=run_name,
+            dir=wandb_dir,
+            config=dict(self.config),
+        )
 
     @staticmethod
     def _parse_srv_targets(labels: np.ndarray) -> torch.Tensor:
@@ -527,4 +539,3 @@ class UnitaryEvaluator:
         srv_exact_match_rate, acc_per_entanglement = self.calculate_metrics(target_srvs, predicted_srvs)
 
         return srv_exact_match_rate, acc_per_entanglement
-

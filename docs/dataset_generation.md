@@ -26,5 +26,5 @@ python scripts/generate_dataset.py \
   hydra.run.dir=. hydra.output_subdir=null \
   datasets=clifford_3q_unitary \
   datasets.num_samples=2000 \
-  datasets.output_path=./datasets/clifford_3q_unitary
+  datasets.output_path=./artifacts/datasets/clifford_3q_unitary
 ```

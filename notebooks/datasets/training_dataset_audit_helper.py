@@ -19,10 +19,10 @@ except ModuleNotFoundError as exc:
     ) from exc
 
 
-TRAINING_REPO = Path("/workspace/qcircuit-generation")
+TRAINING_REPO = Path(__file__).resolve().parents[2]
 TRAINING_SRC = TRAINING_REPO / "src"
-DEFAULT_TRAINING_CFG = TRAINING_REPO / "conf" / "training" / "paper_srv_bucket.yaml"
-DEFAULT_DATASET_ROOT = TRAINING_REPO / "datasets" / "qc_srv_dataset_3to8qubit"
+DEFAULT_TRAINING_CFG = TRAINING_REPO / "conf" / "training" / "paper_stage_2.yaml"
+DEFAULT_DATASET_ROOT = TRAINING_REPO / "artifacts" / "datasets" / "srv-datasets" / "qiskit"
 
 if str(TRAINING_SRC) not in sys.path:
     sys.path.insert(0, str(TRAINING_SRC))

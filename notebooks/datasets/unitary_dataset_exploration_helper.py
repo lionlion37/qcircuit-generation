@@ -24,7 +24,7 @@ except ModuleNotFoundError as exc:
     ) from exc
 
 
-PROJECT_ROOT = Path(__file__).resolve().parents[1]
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_TRAINING_CFG = PROJECT_ROOT / "conf" / "training" / "paper_unitary.yaml"
 
 if str(PROJECT_ROOT / "src") not in sys.path:

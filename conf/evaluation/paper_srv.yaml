@@ -1,11 +1,11 @@
-dataset: ./datasets/paper_quditkit/srv_8q_dataset # qc_srv_dataset_3to8qubit # srv_dataset
-model_dir: ./models/trained/paper_srv_model
+dataset: ./artifacts/datasets/srv-datasets/qiskit/srv_8q_dataset # qc_srv_dataset_3to8qubit # srv_dataset
+model_dir: ./artifacts/models/srv-baseline-reproduction/paper_stage_2
 hf_repo: null 
 num_samples: 5000 # 999999
 max_gates: 16
 backend: quditkit
 save_output: false # true
-save_folder: ./scripts/inference/
+save_folder: ./artifacts/evaluations/srv-baseline-reproduction/
 
 model_params:
   guidance_scale: 7.5

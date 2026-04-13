@@ -24,8 +24,8 @@ How `scripts/evaluate_model.py` scores a diffusion pipeline against a saved genQ
 python scripts/evaluate_model.py \
   hydra.run.dir=. hydra.output_subdir=null \
   evaluation=default \
-  evaluation.dataset=./datasets/srv_dataset \
-  evaluation.model_dir=./models/quick_test \
+  evaluation.dataset=./artifacts/datasets/default/srv_dataset \
+  evaluation.model_dir=./artifacts/models/quick_test \
   evaluation.num_samples=256 \
   evaluation.model_params.guidance_scale=1.5
 ```
