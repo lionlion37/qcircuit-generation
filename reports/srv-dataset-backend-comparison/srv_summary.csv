@@ -1,0 +1,9 @@
+task,label,backbone,optimized,requested_samples,unique_samples,unique_ratio,elapsed_seconds,num_qubits,min_gates,max_gates,pad_constant
+srv,qiskit_not_optimized_10k,qiskit,False,10000,9983,0.9983,10.830136677948758,5,4,20,
+srv,qiskit_not_optimized_100k,qiskit,False,100000,99682,0.99682,102.62290904484689,5,4,20,
+srv,qiskit_optimized_10k,qiskit,True,10000,9808,0.9808,16.868596362881362,5,4,20,
+srv,qiskit_optimized_100k,qiskit,True,100000,94403,0.94403,156.20403267396614,5,4,20,
+srv,quditkit_not_optimized_10k,quditkit,False,10000,9979,0.9979,4.4377994909882545,5,4,20,
+srv,quditkit_not_optimized_100k,quditkit,False,100000,99705,0.99705,41.720197584014386,5,4,20,
+srv,quditkit_optimized_10k,quditkit,True,10000,9982,0.9982,15.17980746878311,5,4,20,
+srv,quditkit_optimized_100k,quditkit,True,100000,99711,0.99711,137.607202477986,5,4,20,
