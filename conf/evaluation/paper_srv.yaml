@@ -1,4 +1,4 @@
-dataset: ./artifacts/datasets/srv-paper-datasets/qiskit/srv_8q_dataset # qc_srv_dataset_3to8qubit # srv_dataset
+dataset: ./artifacts/datasets/srv-datasets/qiskit/srv_8q_dataset # qc_srv_dataset_3to8qubit # srv_dataset
 model_dir: ./artifacts/models/srv-baseline-reproduction/paper_stage_2
 hf_repo: null 
 num_samples: 5000 # 999999

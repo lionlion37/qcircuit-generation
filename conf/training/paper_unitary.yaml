@@ -9,7 +9,7 @@ general:
   output_path: ./artifacts/models/unitary-baseline-reproduction/
   model_name: paper_unitary
   experiment_name: paper_unitary
-  dataset: ./artifacts/datasets/unitary-baseline-reproduction/train
+  dataset: ./artifacts/datasets/unitary-baseline-reproduction/train/qiskit
   njobs: 8
   device: auto
   verbose: true

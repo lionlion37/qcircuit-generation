@@ -28,8 +28,8 @@ experiments:
         - docs/dataset_generation.md
     expected_artifacts:
       datasets:
-        - artifacts/datasets/srv-paper-datasets/qiskit
-        - artifacts/datasets/srv-paper-datasets/quditkit
+        - artifacts/datasets/srv-datasets/qiskit
+        - artifacts/datasets/srv-datasets/quditkit
       evaluations: []
       models: []
       notes:
@@ -82,7 +82,7 @@ experiments:
         - docs/evaluation_pipeline.md
     expected_artifacts:
       datasets:
-        - artifacts/datasets/srv-paper-datasets/qiskit
+        - artifacts/datasets/srv-datasets/qiskit
       models:
         - artifacts/models/srv-baseline-reproduction
       evaluations:
@@ -113,7 +113,7 @@ experiments:
         - docs/evaluation_pipeline.md
     expected_artifacts:
       datasets:
-        - artifacts/datasets/unitary-baseline-reproduction/train
+        - artifacts/datasets/unitary-baseline-reproduction/train/qiskit
         - artifacts/datasets/unitary-baseline-reproduction/eval/qiskit
         - artifacts/datasets/unitary-baseline-reproduction/eval/quditkit
       models:
@@ -147,7 +147,7 @@ experiments:
         - docs/training_pipeline.md
     expected_artifacts:
       datasets:
-        - artifacts/datasets/srv-paper-datasets/qiskit
+        - artifacts/datasets/srv-datasets/qiskit
       models:
         - artifacts/models/srv-text-encoder-ablation
       evaluations:

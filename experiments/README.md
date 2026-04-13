@@ -41,7 +41,7 @@ Dataset generation:
 python scripts/generate_dataset.py \
   hydra.run.dir=. hydra.output_subdir=null \
   datasets=srv_paper_dataset_qiskit_optimized \
-  datasets.output_path=./artifacts/datasets/srv-paper-datasets/qiskit
+  datasets.output_path=./artifacts/datasets/srv-datasets/qiskit
 ```
 
 Training:
@@ -50,7 +50,7 @@ Training:
 python scripts/train_model.py \
   hydra.run.dir=. hydra.output_subdir=null \
   training=paper_stage_1 \
-  training.general.dataset=./artifacts/datasets/srv-paper-datasets/qiskit \
+  training.general.dataset=./artifacts/datasets/srv-datasets/qiskit \
   training.general.output_path=./artifacts/models/srv-baseline-reproduction
 ```
 
@@ -60,7 +60,7 @@ Evaluation:
 python scripts/evaluate_model.py \
   hydra.run.dir=. hydra.output_subdir=null \
   evaluation=paper_srv \
-  evaluation.dataset=./artifacts/datasets/srv-paper-datasets/qiskit/srv_8q_dataset \
+  evaluation.dataset=./artifacts/datasets/srv-datasets/qiskit/srv_8q_dataset \
   evaluation.model_dir=./artifacts/models/srv-baseline-reproduction/paper_stage_2 \
   evaluation.save_folder=./artifacts/evaluations/srv-baseline-reproduction
 ```

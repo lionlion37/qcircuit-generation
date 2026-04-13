@@ -3,7 +3,7 @@ general:
   model_name: cloob_rn50_stage_2
   experiment_name: cloob_rn50_stage_2
   init_from_pipeline_dir: ./artifacts/models/srv-text-encoder-ablation/cloob_rn50_stage_1
-  dataset: ./artifacts/datasets/srv-paper-datasets/qiskit  # srv_3q through srv_8q combined
+  dataset: ./artifacts/datasets/srv-datasets/qiskit  # srv_3q through srv_8q combined
   njobs: 8
   device: auto
   resume: false

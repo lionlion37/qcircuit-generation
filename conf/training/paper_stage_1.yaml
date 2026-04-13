@@ -6,7 +6,7 @@ general:
   output_path: ./artifacts/models/srv-baseline-reproduction/
   model_name: paper_stage_1
   experiment_name: paper_stage_1
-  dataset: ./artifacts/datasets/srv-paper-datasets/qiskit  # srv_3q through srv_8q combined
+  dataset: ./artifacts/datasets/srv-datasets/qiskit  # srv_3q through srv_8q combined
   njobs: 8
   device: auto
   init_from_pipeline_dir: null

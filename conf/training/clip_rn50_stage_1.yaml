@@ -2,7 +2,7 @@ general:
   output_path: ./artifacts/models/srv-text-encoder-ablation/
   model_name: clip_rn50_stage_1
   experiment_name: clip_rn50_stage_1
-  dataset: ./artifacts/datasets/srv-paper-datasets/qiskit  # srv_3q through srv_8q combined
+  dataset: ./artifacts/datasets/srv-datasets/qiskit  # srv_3q through srv_8q combined
   njobs: 8
   device: auto
   resume: false

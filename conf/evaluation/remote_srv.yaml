@@ -1,4 +1,4 @@
-dataset: ./artifacts/datasets/srv-paper-datasets/qiskit/srv_8q_dataset # srv_dataset
+dataset: ./artifacts/datasets/srv-datasets/qiskit/srv_8q_dataset # srv_dataset
 model_dir: null
 hf_repo: Floki00/qc_srv_3to8qubit
 num_samples: 50000 # 999999

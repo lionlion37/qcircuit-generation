@@ -1,4 +1,4 @@
-dataset: ./artifacts/datasets/srv-paper-datasets/quditkit/srv_3q_dataset
+dataset: ./artifacts/datasets/srv-datasets/quditkit/srv_3q_dataset
 model_dir: ./artifacts/models/default/default_model_srv
 hf_repo: null
 num_samples: 64
