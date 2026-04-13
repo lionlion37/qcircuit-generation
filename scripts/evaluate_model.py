@@ -48,7 +48,13 @@ def setup_wandb(config):
 
     project = wandb_cfg.get("project", "qcircuit-generation")
     run_name = wandb_cfg.get("run_name", wandb_cfg.get("experiment_name"))
-    return wandb.init(project=project, name=run_name, config=dict(config))
+    wandb_dir = wandb_cfg.get("dir", "./artifacts/wandb")
+    return wandb.init(
+        project=project,
+        name=run_name,
+        dir=wandb_dir,
+        config=dict(config),
+    )
 
 
 def load_dataset(dataset_path: Path, device: torch.device):

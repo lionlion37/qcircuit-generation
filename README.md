@@ -12,8 +12,8 @@ Hydra-driven scripts for quantum circuit dataset generation, diffusion-model tra
 - `scripts/` – entrypoints: `generate_dataset.py`, `train_model.py`, `evaluate_model.py` (previous Hydra runs live under `scripts/outputs`, `scripts/multirun`, etc.).
 - `src/quantum_diffusion/` – dataset loading/generation helpers, training loop, evaluation utilities, and logging.
 - `src/my_genQC/` – vendored genQC models, pipelines, tokenizers, schedulers, and datasets.
-- `datasets/` – pre-generated SRV datasets (`paper_qiskit`, `paper_quditkit`, `paper_viet`, each with `srv_{3..8}q_dataset/`) plus space for newly generated data.
-- `inference/` – saved sample tensors from prior inference runs.
+- `artifacts/` – canonical location for datasets, trained models, evaluation outputs, logs, and local W&B runs.
+- `experiments/` – thesis experiment registry and bookkeeping.
 - `quditkit-main_schmidt/` – local qudit stabilizer simulator used by notebooks/evaluation.
 - `docs/` – pipeline walkthroughs (`dataset_generation.md`, `training_pipeline.md`, `evaluation_pipeline.md`).
 - `notebooks/`, `tests/` – exploratory work and minimal decoding tests.
@@ -48,7 +48,7 @@ python scripts/generate_dataset.py \
   hydra.run.dir=. hydra.output_subdir=null \
   datasets=clifford_3q_unitary \
   datasets.num_samples=2048 \
-  datasets.output_path=./datasets/clifford_3q_unitary
+  datasets.output_path=./artifacts/datasets/clifford_3q_unitary
 ```
 
 ### Train a diffusion model
@@ -57,8 +57,8 @@ python scripts/generate_dataset.py \
 python scripts/train_model.py \
   hydra.run.dir=. hydra.output_subdir=null \
   training=quick_test_srv \
-  training.general.dataset=./datasets/paper_quditkit \
-  training.general.output_path=./models/quick_test
+  training.general.dataset=./artifacts/datasets/srv-paper-datasets/qiskit \
+  training.general.output_path=./artifacts/models/quick_test
 ```
 If you supply a parent directory containing multiple datasets, the current script trims each to the first 1000 samples before combining (debug behavior in code).
 
@@ -68,8 +68,8 @@ If you supply a parent directory containing multiple datasets, the current scrip
 python scripts/evaluate_model.py \
   hydra.run.dir=. hydra.output_subdir=null \
   evaluation=default \
-  evaluation.dataset=./datasets/paper_quditkit/srv_3q_dataset \
-  evaluation.model_dir=./models/trained/default_model_srv \
+  evaluation.dataset=./artifacts/datasets/srv-paper-datasets/quditkit/srv_3q_dataset \
+  evaluation.model_dir=./artifacts/models/default/default_model_srv \
   evaluation.num_samples=256 \
   evaluation.model_params.guidance_scale=1.5
 ```
@@ -78,10 +78,11 @@ For a hosted pipeline, use the HF preset:
 python scripts/evaluate_model.py \
   hydra.run.dir=. hydra.output_subdir=null \
   evaluation=remote_model \
-  evaluation.dataset=./datasets/paper_quditkit/srv_8q_dataset \
+  evaluation.dataset=./artifacts/datasets/srv-paper-datasets/qiskit/srv_8q_dataset \
   evaluation.model_dir=null
 ```
 
 ## Notes
-- Bundled SRV datasets live under `datasets/paper_qiskit`, `datasets/paper_quditkit`, and `datasets/paper_viet`; default paths in configs assume you generate or copy data into `./datasets/` and save models under `./models/`.
+- The repo now treats `./artifacts/` as the canonical root for generated datasets, checkpoints, evaluation outputs, logs, and local W&B runs.
 - Pipelines rely on PyTorch plus Qiskit or quditkit; GPU is optional but recommended for training.
+- For thesis work, prefer explicit Hydra overrides into `./artifacts/...` and track experiment status in `experiments/registry.yaml`. See `docs/experiment_tracking.md`.

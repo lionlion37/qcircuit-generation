@@ -120,13 +120,13 @@ def main():
         gate_set=['h', 'cx', 'cz', 's'],
         num_qubits=3,
         num_samples=500,
-        output_path='./datasets/example'
+        output_path='./artifacts/datasets/example'
     )
     
     # 2. Load dataset and create dataloaders
     print("Loading dataset...")
     loader = DatasetLoader()
-    dataset = loader.load_dataset('./datasets/example')
+    dataset = loader.load_dataset('./artifacts/datasets/example')
     dataloaders = loader.get_dataloaders(dataset, batch_size=32)
     
     # 3. Train model
@@ -134,7 +134,7 @@ def main():
     trainer = DiffusionTrainer()
     trainer.setup_model(dataset)
     trainer.compile_model()
-    trainer.train(dataloaders, save_path='./models/example')
+    trainer.train(dataloaders, save_path='./artifacts/models/example')
     
     # 4. Evaluate model
     print("Evaluating model...")
@@ -160,8 +160,8 @@ This is an example project created by the QuantumDiffusion framework.
 
 ## Structure
 
-- `datasets/`: Generated quantum circuit datasets
-- `models/`: Trained diffusion models
+- `artifacts/datasets/`: Generated quantum circuit datasets
+- `artifacts/models/`: Trained diffusion models
 - `evaluation/`: Evaluation results and plots
 - `configs/`: Configuration files
 - `logs/`: Log files
@@ -176,13 +176,13 @@ This is an example project created by the QuantumDiffusion framework.
 2. Or use the command-line tools:
    ```bash
    # Generate dataset
-   python -m quantum_diffusion.scripts.generate_dataset --preset clifford_3q_unitary --output ./datasets/my_dataset
+   python -m quantum_diffusion.scripts.generate_dataset --preset clifford_3q_unitary --output ./artifacts/datasets/my_dataset
    
    # Train model
-   python -m quantum_diffusion.scripts.train_model --dataset ./datasets/my_dataset --output ./models/my_model
+   python -m quantum_diffusion.scripts.train_model --dataset ./artifacts/datasets/my_dataset --output ./artifacts/models/my_model
    
    # Evaluate model
-   python -m quantum_diffusion.scripts.evaluate_model --model ./models/my_model --dataset ./datasets/my_dataset --output ./evaluation/my_evaluation
+   python -m quantum_diffusion.scripts.evaluate_model --model ./artifacts/models/my_model --dataset ./artifacts/datasets/my_dataset --output ./artifacts/evaluations/my_evaluation
    ```
 
 For more information, see the main QuantumDiffusion documentation.

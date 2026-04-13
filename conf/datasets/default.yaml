@@ -6,6 +6,6 @@ max_gates: 20
 backbone: qiskit
 condition_type: SRV
 optimized: True
-output_path: ./datasets/srv_dataset
+output_path: ./artifacts/datasets/default/srv_dataset
 device: auto
 n_jobs: 4

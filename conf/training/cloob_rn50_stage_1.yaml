@@ -1,8 +1,8 @@
 general:
-  output_path: ./models/trained/
+  output_path: ./artifacts/models/srv-text-encoder-ablation/
   model_name: cloob_rn50_stage_1
   experiment_name: cloob_rn50_stage_1
-  dataset: ./datasets/qc_srv_dataset_3to8qubit  # srv_3q through srv_8q combined
+  dataset: ./artifacts/datasets/srv-paper-datasets/qiskit  # srv_3q through srv_8q combined
   njobs: 8
   device: auto
   resume: false
@@ -30,7 +30,7 @@ training:
   enable_guidance_train: true
   guidance_train_p: 0.1
   cached_text_enc: true
-  ckpt_path: ./models/cp_saves/cloob_rn50_stage_1/
+  ckpt_path: ./artifacts/models/checkpoints/cloob_rn50_stage_1/
   ckpt_interval: 5
   wandb:
     enable: true
@@ -47,7 +47,7 @@ text_encoder:
     layer: penultimate
     enable_cache_token_limit: true
     local_weights_path: null
-    cloob_weights_path: "./models/encoders/cloob_rn50_yfcc_epoch_28.pt"
+    cloob_weights_path: "./artifacts/models/encoders/cloob_rn50_yfcc_epoch_28.pt"
 
 scheduler:
   type: DDIMScheduler

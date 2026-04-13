@@ -1,10 +1,10 @@
-dataset: ./datasets/qc_srv_dataset_3to8qubit # srv_dataset
+dataset: ./artifacts/datasets/srv-paper-datasets/qiskit/srv_8q_dataset # srv_dataset
 model_dir: null
 hf_repo: Floki00/qc_srv_3to8qubit
 num_samples: 50000 # 999999
 max_gates: 16
 save_output: false # true
-save_folder: ./scripts/inference/
+save_folder: ./artifacts/evaluations/remote-srv/
 
 model_params:
   guidance_scale: 10.0

@@ -1,11 +1,11 @@
 # Stage-2 curriculum finetuning for unitary compilation.
 
 general:
-  output_path: ./models/trained/
+  output_path: ./artifacts/models/unitary-curriculum-learning/
   model_name: unitary_curriculum_stage2
   experiment_name: unitary_curriculum_stage2
-  init_from_pipeline_dir: ./models/trained/unitary_curriculum_stage1
-  dataset: ./datasets/curriculum/unitary_stage2_qiskit
+  init_from_pipeline_dir: ./artifacts/models/unitary-curriculum-learning/unitary_curriculum_stage1
+  dataset: ./artifacts/datasets/unitary-curriculum-learning/stage2
   njobs: 8
   device: auto
   verbose: true
@@ -40,7 +40,7 @@ training:
   guidance_train_p: 0.1
   max_grad_norm: 1.0
   cached_text_enc: true
-  ckpt_path: ./models/cp_saves/unitary_curriculum_stage2/
+  ckpt_path: ./artifacts/models/checkpoints/unitary_curriculum_stage2/
   ckpt_interval: 5
   wandb:
     enable: true
@@ -56,7 +56,7 @@ text_encoder:
     freeze: true
     layer: penultimate
     enable_cache_token_limit: true
-    local_weights_path: "./models/encoders/open_clip_ViT-B-32_laion2b_s34b_b79k.bin"
+    local_weights_path: "./artifacts/models/encoders/open_clip_ViT-B-32_laion2b_s34b_b79k.bin"
 
 scheduler:
   type: DDIMScheduler

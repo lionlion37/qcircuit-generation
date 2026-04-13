@@ -1,0 +1,191 @@
+schema_version: 1
+
+artifact_roots:
+  datasets: artifacts/datasets
+  models: artifacts/models
+  evaluations: artifacts/evaluations
+  logs: artifacts/logs
+
+status_legend:
+  ready: Artifacts are present and usable.
+  partial: Some evidence exists, but artifacts or summaries are incomplete.
+  missing: Expected artifacts are not currently present.
+  unknown: Not yet audited carefully.
+
+experiments:
+  - id: srv_dataset_backend_comparison
+    title: Quditkit vs Qiskit dataset generation
+    task: dataset_generation
+    thesis_goal: Compare backend choice for SRV dataset generation.
+    configs:
+      dataset:
+        - conf/datasets/srv_paper_dataset_qiskit_optimized.yaml
+        - conf/datasets/srv_paper_dataset_quditkit_not_optimized.yaml
+    evidence:
+      notebooks:
+        - notebooks/dataset_generation_quditkit_vs_qiskit.ipynb
+      docs:
+        - docs/dataset_generation.md
+    expected_artifacts:
+      datasets:
+        - artifacts/datasets/srv-paper-datasets/qiskit
+        - artifacts/datasets/srv-paper-datasets/quditkit
+      evaluations: []
+      models: []
+      notes:
+        - reports/thesis/notes/srv_dataset_backend_comparison.md
+    status:
+      overall: partial
+      notes: Notebook and configs exist, but canonical dataset artifact locations and summary notes are not yet populated.
+
+  - id: bucket_padding_variants
+    title: Bucket padding variants
+    task: training_data_pipeline
+    thesis_goal: Compare alternative padding and bucketing behavior during SRV training.
+    configs:
+      training:
+        - conf/training/paper_stage_2.yaml
+    evidence:
+      notebooks:
+        - notebooks/bucket_deep_dive.ipynb
+        - notebooks/bucket_training_alignment_check.ipynb
+      docs:
+        - docs/training_pipeline.md
+    expected_artifacts:
+      datasets: []
+      models:
+        - artifacts/models/bucket-padding-variants
+      evaluations:
+        - artifacts/evaluations/bucket-padding-variants
+      notes:
+        - reports/thesis/notes/bucket_padding_variants.md
+    status:
+      overall: partial
+      notes: Analysis notebooks exist, but specific variant definitions and final result table still need to be consolidated.
+
+  - id: srv_baseline_reproduction
+    title: SRV baseline reproduction
+    task: training_and_evaluation
+    thesis_goal: Reproduce the paper SRV baseline.
+    configs:
+      training:
+        - conf/training/paper_stage_1.yaml
+        - conf/training/paper_stage_2.yaml
+      evaluation:
+        - conf/evaluation/paper_srv.yaml
+    evidence:
+      notebooks:
+        - notebooks/model_evaluation.ipynb
+        - notebooks/model_evaluation_with_repairs.ipynb
+      docs:
+        - docs/training_pipeline.md
+        - docs/evaluation_pipeline.md
+    expected_artifacts:
+      datasets:
+        - artifacts/datasets/srv-paper-datasets/qiskit
+      models:
+        - artifacts/models/srv-baseline-reproduction
+      evaluations:
+        - artifacts/evaluations/srv-baseline-reproduction
+      notes:
+        - reports/thesis/notes/srv_baseline_reproduction.md
+    status:
+      overall: partial
+      notes: Configs and some W&B local run files exist, but reproducible dataset/model/evaluation paths are not centralized.
+
+  - id: unitary_baseline_reproduction
+    title: Unitary baseline reproduction
+    task: training_and_evaluation
+    thesis_goal: Reproduce the paper compilation baseline for the 3-qubit unitary task.
+    configs:
+      dataset:
+        - conf/datasets/unitary_paper_dataset_qiskit_optimized.yaml
+        - conf/datasets/unitary_paper_evaluation_qiskit_optimized.yaml
+      training:
+        - conf/training/paper_unitary.yaml
+    evidence:
+      notebooks:
+        - notebooks/unitary_model_evaluation.ipynb
+        - notebooks/unitary_dataset_exploration.ipynb
+      docs:
+        - docs/dataset_generation.md
+        - docs/training_pipeline.md
+        - docs/evaluation_pipeline.md
+    expected_artifacts:
+      datasets:
+        - artifacts/datasets/unitary-baseline-reproduction/train
+        - artifacts/datasets/unitary-baseline-reproduction/eval/qiskit
+        - artifacts/datasets/unitary-baseline-reproduction/eval/quditkit
+      models:
+        - artifacts/models/unitary-baseline-reproduction
+      evaluations:
+        - artifacts/evaluations/unitary-baseline-reproduction
+      notes:
+        - reports/thesis/notes/unitary_baseline_reproduction.md
+    status:
+      overall: partial
+      notes: Configs and notebooks exist, but evaluation summaries are not organized in one place.
+
+  - id: srv_text_encoder_cloob
+    title: SRV task with CLOOB instead of CLIP
+    task: ablation
+    thesis_goal: Measure the effect of replacing CLIP with CLOOB on the SRV task.
+    configs:
+      training:
+        - conf/training/cloob_rn50_stage_1.yaml
+        - conf/training/cloob_rn50_stage_2.yaml
+        - conf/training/cloob_rn50x4_stage_1.yaml
+        - conf/training/cloob_rn50x4_stage_2.yaml
+        - conf/training/clip_rn50_stage_1.yaml
+        - conf/training/clip_rn50_stage_2.yaml
+        - conf/training/clip_rn50x4_stage_1.yaml
+        - conf/training/clip_rn50x4_stage_2.yaml
+    evidence:
+      notebooks:
+        - notebooks/model_evaluation.ipynb
+      docs:
+        - docs/training_pipeline.md
+    expected_artifacts:
+      datasets:
+        - artifacts/datasets/srv-paper-datasets/qiskit
+      models:
+        - artifacts/models/srv-text-encoder-ablation
+      evaluations:
+        - artifacts/evaluations/srv-text-encoder-ablation
+      notes:
+        - reports/thesis/notes/srv_text_encoder_cloob.md
+    status:
+      overall: partial
+      notes: Config variants are present, but exact comparison pairs and final metrics table still need consolidation.
+
+  - id: unitary_curriculum_learning
+    title: Unitary curriculum learning
+    task: curriculum_learning
+    thesis_goal: Test whether curriculum learning improves the unitary compilation task.
+    configs:
+      dataset:
+        - conf/datasets/unitary_curriculum_stage1_quditkit.yaml
+        - conf/datasets/unitary_curriculum_stage2_qiskit.yaml
+      training:
+        - conf/training/unitary_curriculum_stage1.yaml
+        - conf/training/unitary_curriculum_stage2.yaml
+    evidence:
+      docs:
+        - docs/curriculum_learning.md
+        - docs/training_pipeline.md
+      notebooks:
+        - notebooks/unitary_model_evaluation.ipynb
+    expected_artifacts:
+      datasets:
+        - artifacts/datasets/unitary-curriculum-learning/stage1
+        - artifacts/datasets/unitary-curriculum-learning/stage2
+      models:
+        - artifacts/models/unitary-curriculum-learning/stage1
+        - artifacts/models/unitary-curriculum-learning/stage2
+      evaluations:
+        - artifacts/evaluations/unitary-curriculum-learning
+      notes:
+        - reports/thesis/notes/unitary_curriculum_learning.md
+    status:
+      overall: partial
+      notes: The workflow is documented well, but final result collation and artifact paths are still not centralized.

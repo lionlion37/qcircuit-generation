@@ -36,4 +36,4 @@ balance_max: 60000  # permissive cap; tune to match the paper's final post-balan
 balance_quantile: 0.25
 device: auto
 n_jobs: 12
-output_path: ./datasets/paper_qiskit/unitary_3q_dataset
+output_path: ./artifacts/datasets/unitary-baseline-reproduction/train

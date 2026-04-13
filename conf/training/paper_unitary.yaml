@@ -6,10 +6,10 @@
 # compilation model and the paper-style 3-qubit unitary dataset.
 
 general:
-  output_path: ./models/trained/
+  output_path: ./artifacts/models/unitary-baseline-reproduction/
   model_name: paper_unitary
   experiment_name: paper_unitary
-  dataset: ./datasets/paper_qiskit/unitary_3q_dataset
+  dataset: ./artifacts/datasets/unitary-baseline-reproduction/train
   njobs: 8
   device: auto
   verbose: true
@@ -44,7 +44,7 @@ training:
   guidance_train_p: 0.1
   max_grad_norm: 1.0
   cached_text_enc: true
-  ckpt_path: ./models/cp_saves/paper_unitary/
+  ckpt_path: ./artifacts/models/checkpoints/paper_unitary/
   ckpt_interval: 5
   wandb:
     enable: true
@@ -60,7 +60,7 @@ text_encoder:
     freeze: true
     layer: penultimate
     enable_cache_token_limit: true
-    local_weights_path: "./models/encoders/open_clip_ViT-B-32_laion2b_s34b_b79k.bin"
+    local_weights_path: "./artifacts/models/encoders/open_clip_ViT-B-32_laion2b_s34b_b79k.bin"
 
 scheduler:
   type: DDIMScheduler

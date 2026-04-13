@@ -26,7 +26,7 @@ How `scripts/train_model.py` trains a genQC diffusion model using Hydra configs 
 python scripts/train_model.py \
   hydra.run.dir=. hydra.output_subdir=null \
   training=quick_test_srv \
-  training.general.dataset=./datasets/srv_dataset \
-  training.general.output_path=./models/quick_test \
+  training.general.dataset=./artifacts/datasets/default/srv_dataset \
+  training.general.output_path=./artifacts/models/quick_test \
   training.training.num_epochs=5
 ```

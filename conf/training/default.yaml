@@ -1,8 +1,8 @@
 general:
-  output_path: ./models/trained/
+  output_path: ./artifacts/models/default/
   model_name: default_model_srv
   experiment_name: default_experiment
-  dataset: ./datasets/srv_dataset # ./datasets/clifford_3q_srv_small
+  dataset: ./artifacts/datasets/default/srv_dataset # ./artifacts/datasets/clifford_3q_srv_small
   njobs: 8
   device: auto
   resume: false

@@ -259,7 +259,7 @@ class ConfigManager:
             "min_gates": 2,
             "max_gates": 16,
             "condition_type": "BOTH",
-            "output_path": "./datasets/example_dataset"
+            "output_path": "./artifacts/datasets/example_dataset"
         }
         
         dataset_path = self.config_dir / "datasets" / "example.yaml"

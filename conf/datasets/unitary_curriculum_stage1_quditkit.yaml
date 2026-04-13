@@ -16,4 +16,4 @@ balance_max: 60000
 balance_quantile: 0.25
 device: auto
 n_jobs: 12
-output_path: ./datasets/curriculum/unitary_stage1_quditkit
+output_path: ./artifacts/datasets/unitary-curriculum-learning/stage1

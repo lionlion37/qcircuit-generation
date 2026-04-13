@@ -3,10 +3,10 @@
 # Architecture and hyperparameters match the published HuggingFace model: Floki00/qc_srv_3to8qubit
 
 general:
-  output_path: ./models/trained/
+  output_path: ./artifacts/models/srv-baseline-reproduction/
   model_name: paper_stage_1
   experiment_name: paper_stage_1
-  dataset: ./datasets/qc_srv_dataset_3to8qubit  # srv_3q through srv_8q combined
+  dataset: ./artifacts/datasets/srv-paper-datasets/qiskit  # srv_3q through srv_8q combined
   njobs: 8
   device: auto
   init_from_pipeline_dir: null
@@ -34,7 +34,7 @@ training:
   enable_guidance_train: true
   guidance_train_p: 0.1
   cached_text_enc: true
-  ckpt_path: ./models/cp_saves/paper_stage_1/
+  ckpt_path: ./artifacts/models/checkpoints/paper_stage_1/
   ckpt_interval: 5
   wandb:
     enable: true
@@ -50,7 +50,7 @@ text_encoder:
     freeze: true
     layer: penultimate
     enable_cache_token_limit: true
-    local_weights_path: "./models/encoders/open_clip_ViT-B-32_laion2b_s34b_b79k.bin"
+    local_weights_path: "./artifacts/models/encoders/open_clip_ViT-B-32_laion2b_s34b_b79k.bin"
 
 scheduler:
   type: DDIMScheduler
