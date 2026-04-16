@@ -5,5 +5,5 @@ qc-env:
 	pip install -e src/quditkit-main_schmidt
 
 nice:
-	ruff check --fix src/ scripts/ tests/
-	ruff format src/ scripts/ tests/
+	ruff check --fix --force-exclude src/ scripts/ tests/
+	ruff format --force-exclude src/ scripts/ tests/
