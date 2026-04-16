@@ -406,7 +406,7 @@ class DatasetLoader:
     def _ignore_persisted_z_for_plain_dataset(self, dataset) -> None:
         if (
             self._get_bucket_batch_size() > 0
-            or not isinstance(dataset, circuits_dataset.CircuitsConfigDataset)
+            or type(dataset) != circuits_dataset.CircuitsConfigDataset
             or "z" not in dataset.store_dict
         ):
             return
