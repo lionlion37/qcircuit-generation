@@ -2,9 +2,9 @@
 
 general:
   output_path: ./artifacts/models/unitary-curriculum-learning/
-  model_name: unitary_curriculum_stage2
+  model_name: stage2
   experiment_name: unitary_curriculum_stage2
-  init_from_pipeline_dir: ./artifacts/models/unitary-curriculum-learning/unitary_curriculum_stage1
+  init_from_pipeline_dir: ./artifacts/models/unitary-curriculum-learning/stage1
   dataset: ./artifacts/datasets/unitary-curriculum-learning/stage2
   njobs: 8
   device: auto
@@ -34,7 +34,7 @@ training:
   optimizer: Adam
   lr_scheduler: OneCycleLR
   loss: MSELoss
-  num_epochs: 50
+  num_epochs: 150
   batch_size: 256
   enable_guidance_train: true
   guidance_train_p: 0.1

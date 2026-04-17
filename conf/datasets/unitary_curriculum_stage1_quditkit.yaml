@@ -10,7 +10,7 @@ min_gates: 2
 max_gates: 12
 condition_type: UNITARY
 backbone: quditkit
-optimized: false
+optimized: true
 balance_after_generation: true
 balance_max: 60000
 balance_quantile: 0.25

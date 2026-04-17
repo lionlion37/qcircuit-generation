@@ -1,0 +1,17 @@
+# Evaluation dataset for stage-1 curriculum model (no ccx).
+# Mirrors the stage-1 generation gate set so we evaluate only on circuits
+# the stage-1 model was trained to produce.  Use a different output_path
+# than the training dataset to avoid overlap.
+
+gate_set: ['h', 'cx', 'z', 'x', 'ccx', 'swap']
+generation_gate_set: ['h', 'cx', 'z', 'x', 'swap']
+num_qubits: 3
+num_samples: 3100
+min_gates: 2
+max_gates: 12
+condition_type: UNITARY
+backbone: quditkit
+optimized: true
+device: auto
+n_jobs: 4
+output_path: ./artifacts/datasets/unitary-curriculum-learning/stage1_eval
