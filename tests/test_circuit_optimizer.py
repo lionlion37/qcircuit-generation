@@ -246,6 +246,28 @@ class TestEdgeCases:
         opt = _assert_preserves_unitary(ops, 2)
         assert len(opt) == 3
 
+    def test_cnot3_to_swap_skipped_when_swap_not_in_vocabulary(self):
+        """CNOT·CNOT·CNOT must NOT become SWAP when SWAP is outside the vocabulary."""
+        ops = [
+            (CNOT_gate, (0, 1), False),
+            (CNOT_gate, (1, 0), False),
+            (CNOT_gate, (0, 1), False),
+        ]
+        no_swap = frozenset({"H", "X", "Z", "CNOT"})
+        opt = optimize_ops(list(ops), allowed_gates=no_swap)
+        assert all(g.name != "SWAP" for g, _, _ in opt), "SWAP introduced despite not being in vocabulary"
+        # unitary still preserved
+        U_before = _unitary(ops, 2)
+        U_after = _unitary(opt, 2)
+        assert np.allclose(U_before, U_after, atol=1e-10)
+
+    def test_hzh_skipped_when_x_not_in_vocabulary(self):
+        """H·Z·H must NOT become X when X is outside the vocabulary."""
+        ops = [(H_gate, (0,), False), (Z_gate, (0,), False), (H_gate, (0,), False)]
+        no_x = frozenset({"H", "Z", "CNOT", "SWAP"})
+        opt = optimize_ops(list(ops), allowed_gates=no_x)
+        assert all(g.name != "X" for g, _, _ in opt), "X introduced despite not being in vocabulary"
+
 
 # ---------------------------------------------------------------------------
 # Randomized unitary-preservation

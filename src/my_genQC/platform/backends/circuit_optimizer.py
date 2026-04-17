@@ -95,9 +95,17 @@ def _cancellation_pass(ops: list) -> list:
     return [op for k, op in enumerate(ops) if not cancelled[k]]
 
 
-def _apply_templates(ops: list) -> list:
-    """Single left-to-right pass of 3-gate template matching."""
+def _apply_templates(ops: list, allowed: frozenset | None) -> list:
+    """Single left-to-right pass of 3-gate template matching.
+
+    ``allowed`` is the set of uppercase gate names that may appear in the
+    output.  Templates whose replacement gate is not in ``allowed`` are
+    skipped.  Pass ``None`` to allow any gate.
+    """
     from qudit_sim.predefined_gates import X_gate, Z_gate, SWAP_gate, CNOT_gate
+
+    def ok(name):
+        return allowed is None or name in allowed
 
     result = []
     i = 0
@@ -108,19 +116,19 @@ def _apply_templates(ops: list) -> list:
             qa, qb, qc = a[1], b[1], c[1]
 
             # H·Z·H → X
-            if na == "H" and nb == "Z" and nc == "H" and qa == qb == qc:
+            if na == "H" and nb == "Z" and nc == "H" and qa == qb == qc and ok("X"):
                 result.append((X_gate, qa, False))
                 i += 3
                 continue
 
             # H·X·H → Z
-            if na == "H" and nb == "X" and nc == "H" and qa == qb == qc:
+            if na == "H" and nb == "X" and nc == "H" and qa == qb == qc and ok("Z"):
                 result.append((Z_gate, qa, False))
                 i += 3
                 continue
 
             # CNOT(a,b)·CNOT(b,a)·CNOT(a,b) → SWAP(a,b)
-            if na == "CNOT" and nb == "CNOT" and nc == "CNOT":
+            if na == "CNOT" and nb == "CNOT" and nc == "CNOT" and ok("SWAP"):
                 if qa == qc and qb == (qa[1], qa[0]):
                     lo, hi = min(qa[0], qa[1]), max(qa[0], qa[1])
                     result.append((SWAP_gate, (lo, hi), False))
@@ -128,7 +136,7 @@ def _apply_templates(ops: list) -> list:
                     continue
 
         # 5-gate window: H(a)·H(b)·CNOT(a,b)·H(a)·H(b) → CNOT(b,a)
-        if i + 4 <= len(ops) - 1:
+        if i + 4 <= len(ops) - 1 and ok("CNOT"):
             a, b, c, d, e = ops[i], ops[i+1], ops[i+2], ops[i+3], ops[i+4]
             if (a[0].name == "H" and b[0].name == "H" and c[0].name == "CNOT"
                     and d[0].name == "H" and e[0].name == "H"):
@@ -143,12 +151,19 @@ def _apply_templates(ops: list) -> list:
     return result
 
 
-def optimize_ops(ops: list) -> list:
-    """Optimize a flat op list via fixed-point cancellation + template rewriting."""
+def optimize_ops(ops: list, allowed_gates: frozenset | None = None) -> list:
+    """Optimize a flat op list via fixed-point cancellation + template rewriting.
+
+    ``allowed_gates`` is an optional set of uppercase gate names that the
+    optimizer may introduce via templates (e.g. ``frozenset({"H", "X", "Z",
+    "CNOT", "SWAP"})``).  Gates already present in ``ops`` are never removed
+    unless they cancel; this constraint only prevents templates from producing
+    gates outside the vocabulary.  Pass ``None`` (default) to allow any gate.
+    """
     ops = _normalize_ops(ops)
     prev_len = -1
     while len(ops) != prev_len:
         prev_len = len(ops)
         ops = _cancellation_pass(ops)
-        ops = _apply_templates(ops)
+        ops = _apply_templates(ops, allowed_gates)
     return ops

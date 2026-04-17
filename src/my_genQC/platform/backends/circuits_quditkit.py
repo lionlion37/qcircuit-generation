@@ -123,7 +123,8 @@ class CircuitsQuditkitBackend(BaseBackend):
             return qc
 
         from .circuit_optimizer import optimize_ops
-        optimized = optimize_ops(list(qc.ops))
+        allowed = frozenset(g.upper() if g != "cx" else "CNOT" for g in vocabulary)
+        optimized = optimize_ops(list(qc.ops), allowed_gates=allowed)
 
         new_qc = QuantumCircuit(num_qudits=qc.n, dim=qc.d)
         for gate, qubits, dagger in optimized:
