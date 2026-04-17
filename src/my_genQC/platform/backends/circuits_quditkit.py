@@ -16,7 +16,6 @@ from qudit_sim.gate_class import Gate
 from qudit_sim.tableau import Tableau
 from qudit_sim.utils import *
 
-from qiskit import transpile
 
 # def get_number_of_gate_params(gate_cls: type[Gate]) -> int:
 #     # python: gives you the number of any arguments BEFORE *args, minus the ones that have a default, -1 for self parameter of classes
@@ -119,26 +118,17 @@ class CircuitsQuditkitBackend(BaseBackend):
                          vocabulary: Vocabulary,
                          optimization_level: int = 1,
                          silent: bool = True) -> QuantumCircuit:
-        """Use `qiskit.compiler.transpile` to optimize a circuit."""
-
-
+        """Natively optimize a quditkit circuit using gate cancellation and template matching."""
         if optimization_level == 0:
             return qc
 
-        qiskit_circuit = qc.to_qiskit()
+        from .circuit_optimizer import optimize_ops
+        optimized = optimize_ops(list(qc.ops))
 
-        while optimization_level > 0:
-            try:
-                qc_opt = transpile(qiskit_circuit, optimization_level=optimization_level, basis_gates=vocabulary)
-                return QuantumCircuit.from_qiskit(qc_opt)
-
-            except Exception as er:
-                if not silent: print(er)
-                pass
-
-            optimization_level -= 1
-
-        return QuantumCircuit.from_qiskit(qiskit_circuit)
+        new_qc = QuantumCircuit(num_qudits=qc.n, dim=qc.d)
+        for gate, qubits, dagger in optimized:
+            new_qc.append(gate, qubits, dagger=dagger)
+        return new_qc
 
     def rnd_circuit(self,
                     num_of_qubits: int,
