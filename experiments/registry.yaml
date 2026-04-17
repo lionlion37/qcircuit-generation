@@ -160,6 +160,7 @@ experiments:
     configs:
       dataset:
         - conf/datasets/unitary_curriculum_stage1_quditkit.yaml
+        - conf/datasets/unitary_curriculum_stage1_eval_quditkit.yaml
         - conf/datasets/unitary_curriculum_stage2_qiskit.yaml
       training:
         - conf/training/unitary_curriculum_stage1.yaml
@@ -173,14 +174,21 @@ experiments:
     expected_artifacts:
       datasets:
         - artifacts/datasets/unitary-curriculum-learning/stage1
+        - artifacts/datasets/unitary-curriculum-learning/stage1_eval
         - artifacts/datasets/unitary-curriculum-learning/stage2
       models:
-        - artifacts/models/unitary-curriculum-learning/stage1
-        - artifacts/models/unitary-curriculum-learning/stage2
+        - artifacts/models/unitary-curriculum-learning/unitary_curriculum_stage1
+        - artifacts/models/unitary-curriculum-learning/unitary_curriculum_stage2
       evaluations:
         - artifacts/evaluations/unitary-curriculum-learning
       notes:
         - reports/thesis/notes/unitary_curriculum_learning.md
     status:
-      overall: partial
-      notes: Early stages, pipeline is running, however has to be finetuned.
+      overall: in_progress
+      notes: >
+        Stage1 (150 epochs, unoptimized quditkit) + stage2 (150 epochs) complete.
+        Stage2 exact_found_rate=0.531 vs baseline 0.617. Root cause: stage1 trained on
+        unoptimized quditkit circuits (redundant gates → noisy unitary targets).
+        Native quditkit optimizer implemented (circuit_optimizer.py); both stage1
+        dataset configs flipped to optimized=true. Next: regenerate stage1 training
+        and eval datasets, retrain stage1, retrain stage2, re-evaluate.
