@@ -31,12 +31,18 @@ experiments:
         - artifacts/datasets/srv-datasets/qiskit
         - artifacts/datasets/srv-datasets/quditkit
       evaluations:
-        - artifacts/evaluation/srv-dataset-backend-comparison
+        - artifacts/evaluations/srv_dataset_backend_comparison/backend_comparison
       models: []
-      notes: []
+      notes:
+        - reports/srv-dataset-backend-comparison/README.md
     status:
-      overall: partial
-      notes: Notebook with results exist, but still need to save results and create figures.
+      overall: ready
+      notes: >
+        Second run includes native quditkit optimizer (no qiskit round-trip).
+        quditkit optimized is 3.4–3.8× faster than qiskit optimized.
+        Unitary unique_ratio lower (0.694 vs 0.759 at 100k) due to more aggressive
+        canonicalisation — expected, not a problem for 3M training runs with balancing.
+        Figures and CSVs in reports/srv-dataset-backend-comparison/.
 
   - id: bucket_padding_variants
     title: Bucket padding variants
