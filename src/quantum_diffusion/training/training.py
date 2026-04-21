@@ -324,6 +324,18 @@ class DiffusionTrainer:
                 self.logger.info(
                     f"Using OneCycleLR: max_lr={max_lr}, total_steps={total_steps}"
                 )
+            elif lr_sched_name == "CosineAnnealingLR":
+                steps_per_epoch = len(dataloaders.train)
+                total_steps = num_epochs * steps_per_epoch
+
+                def lr_sched_fn(opt):
+                    return torch.optim.lr_scheduler.CosineAnnealingLR(
+                        opt, T_max=total_steps
+                    )
+
+                self.logger.info(
+                    f"Using CosineAnnealingLR: T_max={total_steps}"
+                )
 
             # Train the model
             history = self.pipeline.fit(
