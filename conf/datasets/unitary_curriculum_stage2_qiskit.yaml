@@ -3,7 +3,7 @@
 
 gate_set: ['h', 'cx', 'z', 'x', 'ccx', 'swap']
 num_qubits: 3
-num_samples: 500000
+num_samples: 4000000
 min_gates: 2
 max_gates: 12
 condition_type: UNITARY
