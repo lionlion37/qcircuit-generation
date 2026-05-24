@@ -10,7 +10,7 @@ num_samples: 3100
 min_gates: 2
 max_gates: 12
 condition_type: UNITARY
-backbone: quditkit
+backbone: qiskit
 optimized: true
 device: auto
 n_jobs: 4

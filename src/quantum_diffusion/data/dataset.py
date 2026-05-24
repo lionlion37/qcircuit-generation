@@ -226,7 +226,7 @@ class DatasetGenerator:
                 if condition == CircuitConditionType.SRV:
                     mixed_dataset = dataset
                 elif condition == CircuitConditionType.UNITARY:
-                    dataset.U = Us.float()
+                    dataset.U = Us.double()
                     datasets_list = [dataset]
 
                     if balance_after_generation:

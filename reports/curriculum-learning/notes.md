@@ -1,14 +1,27 @@
 # Curriculum Learning Investigation Notes
 
-**Date:** 2026-04-21
-**Status:** In progress — stage2 underperforms baseline
+**Date:** 2026-05-24
+**Status:** In progress — stage2 underperforms on full gate set; partially recovers on Clifford-only
 
-## Current Results (128 eval unitaries, 128 samples each)
+## Current Results (128 eval unitaries, 128 samples each, guidance_scale=7.5, sample_steps=20)
 
-| Model | exact_found_rate | mean_distinct_correct | mean_best_model_distance |
+### Paper eval dataset — full gate set {h, cx, z, x, ccx, swap}
+(`artifacts/datasets/unitary-baseline-reproduction/eval/qiskit`, float64 targets via re-decode)
+
+| Model | exact_found_rate | mean_distinct_correct | mean_exact_count |
 |---|---|---|---|
-| baseline | 0.617 | 23.80 | 0.078 |
-| curriculum-stage2 | 0.531 | 9.09 | 0.461 |
+| remote (paper weights) | **0.984** | 30.9 | 86.3 |
+| baseline (our reproduction) | **0.969** | 32.9 | 83.8 |
+| curriculum-stage2 | **0.906** | 19.0 | 62.5 |
+
+### Stage1 eval dataset — Clifford-only {h, cx, z, x, swap}, no ccx
+(`artifacts/datasets/unitary-curriculum-learning/stage1_eval`, qiskit backend, float64 U)
+
+| Model | exact_found_rate | mean_distinct_correct | mean_exact_count |
+|---|---|---|---|
+| remote (paper weights) | **1.000** | 36.8 | 91.3 |
+| baseline (our reproduction) | **1.000** | 41.3 | 87.9 |
+| curriculum-stage2 | **0.953** | 24.9 | 68.9 |
 
 ## Dataset Sizes (actual stored tensors)
 

@@ -233,9 +233,8 @@ experiments:
     status:
       overall: in_progress
       notes: >
-        Stage1 (150 epochs, unoptimized quditkit) + stage2 (150 epochs) complete.
-        Stage2 exact_found_rate=0.531 vs baseline 0.617. Root cause: stage1 trained on
-        unoptimized quditkit circuits (redundant gates → noisy unitary targets).
-        Native quditkit optimizer implemented (circuit_optimizer.py); both stage1
-        dataset configs flipped to optimized=true. Next: regenerate stage1 training
-        and eval datasets, retrain stage1, retrain stage2, re-evaluate.
+        Stage1 (150 epochs, optimized quditkit) + stage2 (150 epochs) complete.
+        Stage2 exact_found_rate=0.953 vs baseline 1.000 on stage1_eval (Clifford-only,
+        qiskit backend, float64 U). Stage2 still underperforms baseline; root causes
+        include smaller stage2 dataset (~8x baseline), OneCycleLR warmup disrupting
+        pretrained weights, and backend mismatch between stages.
