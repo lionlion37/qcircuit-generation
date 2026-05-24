@@ -114,6 +114,7 @@ class DatasetGenerator:
         condition_type: Union[
             str, List[str], CircuitConditionType, List[CircuitConditionType]
         ] = "SRV",
+        include_swap_count: bool = False,
         output_path: str = "./datasets",
         **kwargs,
     ) -> Dict[str, Dict[str, Union[str, int]]]:
@@ -188,6 +189,7 @@ class DatasetGenerator:
                 if condition == CircuitConditionType.UNITARY:
                     generation_kwargs["min_sub_gate_pool_cnt"] = 2
                     generation_kwargs["max_sub_gate_pool_cnt"] = len(active_gate_set)
+                    generation_kwargs["include_swap_count"] = include_swap_count
                 else:
                     generation_kwargs["min_sub_gate_pool_cnt"] = 2
                     generation_kwargs["fixed_sub_gate_pool"] = active_gate_set

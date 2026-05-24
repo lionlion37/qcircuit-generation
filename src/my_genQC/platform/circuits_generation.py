@@ -58,22 +58,23 @@ def get_rnd_encoded_circuit(backend: BaseBackend,
     return qc, condition, *enc_tuple
 
 # %% ../../src/platform/circuits_generation.ipynb 6
-def get_rnd_encoded_circuits(backend: BaseBackend, 
+def get_rnd_encoded_circuits(backend: BaseBackend,
                              tokenizer: CircuitTokenizer,
-                             condition: CircuitConditionType,                                  
-                             samples: int, 
-                             num_of_qubits: int, 
-                             min_gates: int, 
-                             max_gates: int,                       
+                             condition: CircuitConditionType,
+                             samples: int,
+                             num_of_qubits: int,
+                             min_gates: int,
+                             max_gates: int,
                              available_gate_pool: Optional[Sequence[str]] = None,
                              min_sub_gate_pool_cnt: int = 1,
                              max_sub_gate_pool_cnt: Optional[int] = None,
                              fixed_sub_gate_pool: Optional[Sequence[str]] = None,
                              max_num_params: Optional[int] = None,
                              filter_unique: bool = True,
-                             optimized: bool = True,                                                         
+                             optimized: bool = True,
                              post_randomize_params: bool = True,
                              return_params: bool = True,
+                             include_swap_count: bool = False,
                              silent: bool = False) -> Tuple[torch.Tensor, ...]:
     """
     Generate ´samples´ number of random circuits with corresponding condition. 
@@ -132,20 +133,24 @@ def get_rnd_encoded_circuits(backend: BaseBackend,
                                       return_params=return_params)
         
         if return_params:
-            _, cond, qc_tensor, params_tensor = val    
+            qc, cond, qc_tensor, params_tensor = val
             p.append(params_tensor)
         else:
-            _, cond, qc_tensor = val
+            qc, cond, qc_tensor = val
 
         x.append(qc_tensor)
-        
+
         match condition:
-            case CircuitConditionType.SRV:      
-                label = f"Generate SRV: {cond.tolist()}"     
+            case CircuitConditionType.SRV:
+                label = f"Generate SRV: {cond.tolist()}"
                 u.append(cond)
-                
-            case CircuitConditionType.UNITARY:  
-                label = f"Compile using: {[str(gate) for gate in sub_gate_pool]}"           
+
+            case CircuitConditionType.UNITARY:
+                if include_swap_count and "swap" in sub_gate_pool:
+                    swap_count = sum(1 for inst in qc.data if inst.operation.name == "swap")
+                    label = f"Compile using: {[str(gate) for gate in sub_gate_pool]}; swap_count={swap_count}"
+                else:
+                    label = f"Compile using: {[str(gate) for gate in sub_gate_pool]}"
                 u.append(cond)
                 
             case _: raise NotImplementedError(f"Not implemented given condition: {condition}")
@@ -193,14 +198,14 @@ def get_rnd_encoded_circuits(backend: BaseBackend,
         return x, y, u
 
 # %% ../../src/platform/circuits_generation.ipynb 8
-def generate_circuit_dataset(backend: BaseBackend, 
+def generate_circuit_dataset(backend: BaseBackend,
                              tokenizer: CircuitTokenizer,
-                             condition: CircuitConditionType,                                  
-                             total_samples: int,    
-                             num_of_qubits: int, 
-                             min_gates: int, 
-                             max_gates: int,  
-                             batch_samples: int = 128,  
+                             condition: CircuitConditionType,
+                             total_samples: int,
+                             num_of_qubits: int,
+                             min_gates: int,
+                             max_gates: int,
+                             batch_samples: int = 128,
                              n_jobs: int = 1,
                              unitary_dtype: torch.dtype = torch.float16,
                              available_gate_pool: Optional[Sequence[str]] = None,
@@ -209,9 +214,10 @@ def generate_circuit_dataset(backend: BaseBackend,
                              fixed_sub_gate_pool: Optional[Sequence[str]] = None,
                              max_num_params: Optional[int] = None,
                              filter_unique: bool = True,
-                             optimized: bool = True,                                                         
+                             optimized: bool = True,
                              post_randomize_params: bool = True,
-                             return_params: bool = True) -> Tuple[torch.Tensor, ...]:
+                             return_params: bool = True,
+                             include_swap_count: bool = False) -> Tuple[torch.Tensor, ...]:
     """
     Generates ´samples´ number of random circuits with corresponding condition. 
     Supports large scale dataset with large unitaries. Uses memory mapping and parallelization.
@@ -232,13 +238,13 @@ def generate_circuit_dataset(backend: BaseBackend,
     #------------------
     # Check data sizes
 
-    gen_data = functools.partial(get_rnd_encoded_circuits, 
-                                 backend=backend, 
+    gen_data = functools.partial(get_rnd_encoded_circuits,
+                                 backend=backend,
                                  tokenizer=tokenizer,
                                  condition=condition,
-                                 samples=batch_samples,        
-                                 num_of_qubits=num_of_qubits, 
-                                 min_gates=min_gates, 
+                                 samples=batch_samples,
+                                 num_of_qubits=num_of_qubits,
+                                 min_gates=min_gates,
                                  max_gates=max_gates,
                                  available_gate_pool=available_gate_pool,
                                  min_sub_gate_pool_cnt=min_sub_gate_pool_cnt,
@@ -249,6 +255,7 @@ def generate_circuit_dataset(backend: BaseBackend,
                                  optimized=optimized,
                                  post_randomize_params=post_randomize_params,
                                  return_params=return_params,
+                                 include_swap_count=include_swap_count,
                                  silent=True)
 
     x, y, u, p = gen_data()

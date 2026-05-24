@@ -1,0 +1,26 @@
+# Unitary compilation dataset with SWAP-budget conditioning.
+# Based on unitary_paper_dataset_qiskit_optimized.yaml.
+#
+# The only difference from the baseline unitary dataset is `include_swap_count: true`,
+# which appends "; SWAP <= N" to each label, where N is the actual number of SWAP gates
+# in the generated circuit. This teaches the model to respect a SWAP budget at inference time.
+#
+# Parameters match the paper (Fürrutter et al., NMI 2024):
+# - 3 qubits, gate set {H, CX, Z, X, CCX, SWAP}, circuit lengths 2..12
+# - ~2.5M distinct circuits after dedup + balancing
+
+gate_set: ['h', 'cx', 'z', 'x', 'ccx', 'swap']
+num_qubits: 3
+num_samples: 4000000
+min_gates: 2
+max_gates: 12
+condition_type: UNITARY
+backbone: qiskit
+optimized: true
+balance_after_generation: true
+balance_max: 60000
+balance_quantile: 0.25
+include_swap_count: true
+device: auto
+n_jobs: 12
+output_path: ./artifacts/datasets/unitary-swap-constrained/train

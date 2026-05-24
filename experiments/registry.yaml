@@ -159,6 +159,47 @@ experiments:
       overall: ready
       notes: Some polishing still has to be done.
 
+  - id: unitary_swap_count_conditioning
+    title: SWAP-count conditioning for unitary compilation
+    task: ablation
+    thesis_goal: >
+      Extend the unitary compilation model to accept an exact SWAP gate count via
+      a prompt suffix ("; swap_count=N"), enabling the user to steer how many SWAP
+      gates appear in generated circuits — a practical noise-reduction handle for
+      real hardware.
+    configs:
+      dataset:
+        - conf/datasets/unitary_swap_constrained_qiskit.yaml
+      training:
+        - conf/training/unitary_swap_constrained.yaml
+    evidence:
+      notebooks:
+        - notebooks/datasets/swap_gate_analysis.ipynb
+        - notebooks/evaluation/unitary/swap_constrained_evaluation.ipynb
+      docs: []
+    expected_artifacts:
+      datasets:
+        - artifacts/datasets/unitary-swap-constrained/train
+      models:
+        - artifacts/models/unitary-swap-constrained/unitary_swap_constrained
+      evaluations:
+        - artifacts/evaluations/unitary-swap-constrained/swap_count_evaluation
+      notes:
+        - reports/swap-count-conditioning/notes.md
+    status:
+      overall: partial
+      notes: >
+        Implementation complete. Code changes: include_swap_count flag added to
+        get_rnd_encoded_circuits() and generate_circuit_dataset() in
+        src/my_genQC/platform/circuits_generation.py; propagated through
+        DatasetGenerator.generate_dataset() in src/quantum_diffusion/data/dataset.py.
+        Label format: "Compile using: [...]; swap_count=N" — suffix only added
+        when 'swap' is in the gate pool (avoids polluting trivial zero-count examples).
+        Status quo analysis run on baseline model: mean generated SWAP = 0.99
+        (dataset mean = 2.0), correct compilations use slightly more SWAPs (1.13)
+        than wrong ones (0.87). Dataset generation, training, and evaluation pending.
+        See reports/swap-count-conditioning/notes.md for full analysis.
+
   - id: unitary_curriculum_learning
     title: Unitary curriculum learning
     task: curriculum_learning
