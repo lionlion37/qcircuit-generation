@@ -41,6 +41,27 @@ conditioning (consistent with the paper's likely inference setup).
 **Secondary fix:** `generate_circuit_dataset` default changed from `torch.float16` to
 `torch.float32` to avoid even worse quantization in newly generated datasets.
 
+## Secondary Fix: Complex64 Comparison Arithmetic
+
+Even after fix 1, casting both tensors to `torch.complex64` for the infidelity computation
+reintroduces float32 quantization error (~1.19e-7 per comparison). This is exactly float32
+machine epsilon and pushes near-exact circuits back above the 1e-8 threshold.
+
+**Fix:** Cast both the generated and target unitary tensors to `torch.complex128` before calling
+`UnitaryInfidelityNorm.distance()`. This ensures the comparison happens in float64 arithmetic.
+
+This was discovered during the SWAP-count conditioning evaluation: the baseline still showed
+0.617 exact_found_rate after fix 1, and wrong circuits had median infidelity 1.19e-7 — a clear
+float32-arithmetic signature. After applying fix 2, baseline exact_found_rate = 0.961, consistent
+with the result in this notebook.
+
+**Summary of correct evaluation protocol:**
+1. Re-simulate reference circuit from `dataset.x[idx]` at float64 to get exact target unitary
+2. Pass float32 split to the model for conditioning (as during training)
+3. Compare generated unitary to float64 target using `torch.complex128` arithmetic
+
+---
+
 ## Gap vs Paper (92.6%)
 
 Our models achieve ~97–98% on this dataset vs the paper's 92.6% on their original test set.
