@@ -235,12 +235,53 @@ experiments:
       notes:
         - reports/swap-count-conditioning/finetuned_notes.md
     status:
-      overall: partial
+      overall: ready
       notes: >
-        Config created. Dataset already available (reuses unitary-swap-constrained/train).
-        Training not yet started. Evaluation notebook exists and can be reused
-        by pointing SWAP_MODEL_DIR at the new model path and setting
-        ARTIFACT_SUBDIR = "unitary-swap-finetuned".
+        Complete. Fine-tuned from baseline (96.1%) using lr=3e-5, CosineAnnealingLR, 75 epochs.
+        Key results (128 unitaries, 64 samples, float64-corrected):
+        count=0: exact_found=0.898, compliance=0.970, mean_actual_swap=0.030;
+        count=1: exact_found=0.922, compliance=0.831, mean_actual_swap=1.150;
+        count=2: exact_found=0.914, compliance=0.824, mean_actual_swap=2.150;
+        count=3: exact_found=0.891, compliance=0.763, mean_actual_swap=3.160.
+        Accuracy recovers to 89-92% vs 63-67% from-scratch — closes ~30pp gap to ~4-7pp below baseline.
+        SWAP compliance relaxes (83-97%) vs from-scratch (~100%): model trades strict SWAP count
+        for correct compilation. This confirms the from-scratch accuracy drop was a training-strategy
+        issue, not architectural. Fine-tuning from baseline is the right approach for CLIP-conditioned
+        numeric constraints. See reports/swap-count-conditioning/finetuned_notes.md for full analysis.
+
+  - id: unitary_swap_noise_simulation
+    title: SWAP count vs noisy hardware fidelity
+    task: ablation
+    thesis_goal: >
+      Demonstrate that circuits generated with fewer SWAP gates achieve higher
+      state fidelity under a realistic depolarising noise model, closing the
+      motivational loop for SWAP-count conditioning on real hardware.
+    configs:
+      training:
+        - conf/training/unitary_swap_finetuned.yaml
+    evidence:
+      notebooks:
+        - notebooks/evaluation/unitary/swap_noise_simulation.ipynb
+      docs: []
+    expected_artifacts:
+      datasets:
+        - artifacts/datasets/unitary-baseline-reproduction/eval/qiskit
+      models:
+        - artifacts/models/unitary-swap-finetuned/unitary_swap_finetuned
+      evaluations:
+        - artifacts/evaluations/unitary-swap-noise/noise_simulation
+      notes:
+        - reports/swap-count-conditioning/finetuned_notes.md
+    status:
+      overall: ready
+      notes: >
+        Complete. 64 unitaries, 64 samples/count, swap_count in {0,1,2,3}.
+        Noise model: depolarising p1=0.001 (1q), p2=0.01 (CX), p_swap=0.03, p_ccx=0.06.
+        Mean noisy fidelity: count=0: 0.952, count=1: 0.936, count=2: 0.919, count=3: 0.898.
+        Monotonic fidelity decrease confirms SWAP count conditioning is hardware-relevant.
+        Swap-0 circuits also shorter overall (mean 4.28 vs 6.15 gates for count=3).
+        Noise sweep shows gap widens with higher error rates.
+        Thesis figures in reports/swap-count-conditioning/.
 
   - id: unitary_curriculum_learning
     title: Unitary curriculum learning

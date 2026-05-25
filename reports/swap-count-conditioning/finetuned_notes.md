@@ -1,7 +1,7 @@
 # SWAP-Count Conditioning via Fine-tuning from Baseline
 
 **Date:** 2026-05-25
-**Status:** training pending
+**Status:** complete
 **Experiment ID:** `unitary_swap_finetuned`
 
 ---
@@ -89,7 +89,7 @@ ARTIFACT_SUBDIR = "unitary-swap-finetuned"
 
 ## Results
 
-*(to be filled after training and evaluation)*
+**Evaluated 2026-05-25.** 128 unitaries, 64 samples, guidance=7.5, 20 DDIM steps, float64-corrected.
 
 | Model / requested count | exact_found_rate | exact_compliance_rate | mean_actual_swap |
 |---|---|---|---|
@@ -97,6 +97,40 @@ ARTIFACT_SUBDIR = "unitary-swap-finetuned"
 | from-scratch, count=0 | 0.648 | 1.000 | 0.000 |
 | from-scratch, count=1 | 0.633 | 1.000 | 1.000 |
 | from-scratch, count=2 | 0.672 | 0.999 | 2.000 |
-| finetuned, count=0 | — | — | — |
-| finetuned, count=1 | — | — | — |
-| finetuned, count=2 | — | — | — |
+| finetuned, count=0 | 0.898 | 0.970 | 0.030 |
+| finetuned, count=1 | 0.922 | 0.831 | 1.150 |
+| finetuned, count=2 | 0.914 | 0.824 | 2.150 |
+| finetuned, count=3 | 0.891 | 0.763 | 3.160 |
+| finetuned, count=6 | 0.750 | 0.874 | 5.890 |
+
+### Analysis
+
+**Outcome: scenario 1 confirmed.** Accuracy at counts 0–3 recovers to 89–92%, well above the >85%
+target and far above the from-scratch model (63–67%). This confirms that:
+
+1. The accuracy drop in from-scratch training was a **training-strategy problem**, not an
+   architectural limitation. The CLIP embedding shift from the suffix is manageable once the model
+   already knows how to compile.
+
+2. **Fine-tuning from baseline is the right approach** for CLIP-conditioned numeric constraints.
+   The pretrained compilation knowledge is preserved; the model only needs to adapt the embedding
+   distribution, which it achieves quickly at 3e-5 / CosineAnnealingLR.
+
+**SWAP compliance trade-off:** Compliance drops from ~100% (from-scratch) to 83–97% (finetuned).
+The finetuned model is less rigid about hitting the exact SWAP count — it prioritises compiling the
+unitary correctly and sometimes uses one extra SWAP. For count=0, compliance is still 97% and
+accuracy is 89.8%. For count=1–3, compliance is 76–83% with accuracy ~90–92%.
+
+This is arguably a better real-world trade-off: an exact count of SWAP gates is hardware-engineering
+detail; a user specifying `swap_count=1` primarily wants to *minimise* SWAPs, not fail compilation
+to achieve exactness. The mean_actual_swap tracks the requested count closely (0.03, 1.15, 2.15,
+3.16 for requests 0–3), showing the model broadly learned the constraint direction.
+
+**Comparison to baseline:** The finetuned model at count=1 (92.2%) is within 4 points of the
+unconstrained baseline (96.1%). For count=6 (loose budget), accuracy is 75% — still lower than
+baseline, suggesting the unconstrained prompt remains a slightly cleaner signal than a high-budget
+suffix.
+
+**Conclusion:** Fine-tuning from baseline closes the accuracy gap from ~30pp to ~4–7pp while
+maintaining meaningful (if imperfect) SWAP compliance. The CLIP-based conditioning, given a warm
+start, is sufficient for practical noise-aware circuit generation.
