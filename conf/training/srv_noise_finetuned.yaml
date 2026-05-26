@@ -1,0 +1,65 @@
+# Fine-tune the SRV baseline (paper_stage_2) for CX-level-aware circuit generation.
+# Dataset labels extended with "; cx_level=low/medium/high" via notebooks/datasets/srv_cx_level_relabelling.ipynb.
+# Warm-start from paper_stage_2 weights; lower lr to preserve compilation quality.
+
+general:
+  output_path: ./artifacts/models/srv-noise-conditioning/
+  model_name: srv_noise_finetuned
+  experiment_name: srv_noise_finetuned
+  init_from_pipeline_dir: ./artifacts/models/srv-baseline-reproduction/paper_stage_2
+  dataset: ./artifacts/datasets/srv-noise-conditioning/
+  njobs: 8
+  device: auto
+  verbose: true
+
+model:
+  type: QC_Cond_UNet
+  save_type: pt
+  params:
+    model_features: [128, 128, 256]
+    clr_dim: 4
+    num_clrs: 4
+    t_emb_size: 256
+    cond_emb_size: 512
+    num_heads: [8, 8, 2]
+    num_res_blocks: [2, 2, 4]
+    transformer_depths: [1, 2, 1]
+
+training:
+  padding_mode: bucket
+  learning_rate: 3e-5
+  optimizer: Adam
+  loss: MSELoss
+  num_epochs: 50
+  batch_size: 256
+  enable_guidance_train: true
+  guidance_train_p: 0.1
+  cached_text_enc: false  # labels changed — must regenerate CLIP embedding cache
+  ckpt_path: ./artifacts/models/checkpoints/srv_noise_finetuned/
+  ckpt_interval: 5
+  wandb:
+    enable: true
+    project: qcircuit-generation
+    run_name: srv_noise_finetuned
+
+text_encoder:
+  type: CachedFrozenOpenCLIPEmbedder
+  params:
+    arch: ViT-B-32
+    version: null
+    max_length: 77
+    freeze: true
+    layer: penultimate
+    enable_cache_token_limit: true
+    local_weights_path: "./artifacts/models/encoders/open_clip_ViT-B-32_laion2b_s34b_b79k.bin"
+
+scheduler:
+  type: DDIMScheduler
+  params:
+    num_train_timesteps: 1000
+    beta_start: 0.0001
+    beta_end: 0.02
+    beta_schedule: cos_alpha
+    input_perturbation: 0.1
+    prediction_type: epsilon
+    eta: 1

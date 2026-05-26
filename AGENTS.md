@@ -21,6 +21,12 @@ Each of `notebooks/`, `src/`, `experiments/`, and `reports/` has its own `AGENTS
 
 ---
 
+## Communication style
+
+- Do **not** end responses with a question to prompt further engagement. State findings and conclusions directly. If a decision is genuinely needed, surface it once — do not fish for it.
+
+---
+
 ## Global conventions
 
 ### Hydra configuration
