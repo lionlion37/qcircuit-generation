@@ -1,9 +1,9 @@
 # Curriculum Learning Investigation Notes
 
-**Date:** 2026-05-24
-**Status:** In progress — stage2 underperforms on full gate set; partially recovers on Clifford-only
+**Date:** 2026-05-26
+**Status:** Complete — curriculum pretraining does not improve over optimally-trained from-scratch model on same data budget
 
-## Current Results (128 eval unitaries, 128 samples each, guidance_scale=7.5, sample_steps=20)
+## Results (128 eval unitaries, 128 samples each, guidance_scale=7.5, sample_steps=20)
 
 ### Paper eval dataset — full gate set {h, cx, z, x, ccx, swap}
 (`artifacts/datasets/unitary-baseline-reproduction/eval/qiskit`, float64 targets via re-decode)
@@ -12,7 +12,8 @@
 |---|---|---|---|
 | remote (paper weights) | **0.984** | 30.9 | 86.3 |
 | baseline (our reproduction) | **0.969** | 32.9 | 83.8 |
-| curriculum-stage2 | **0.906** | 19.0 | 62.5 |
+| stage2-scratch (lr=3e-4, OneCycleLR) | **0.938** | 13.7 | 59.2 |
+| curriculum-stage2 (from stage1, lr=5e-5) | **0.906** | 19.0 | 62.5 |
 
 ### Stage1 eval dataset — Clifford-only {h, cx, z, x, swap}, no ccx
 (`artifacts/datasets/unitary-curriculum-learning/stage1_eval`, qiskit backend, float64 U)
@@ -21,7 +22,15 @@
 |---|---|---|---|
 | remote (paper weights) | **1.000** | 36.8 | 91.3 |
 | baseline (our reproduction) | **1.000** | 41.3 | 87.9 |
-| curriculum-stage2 | **0.953** | 24.9 | 68.9 |
+| curriculum-stage2 (from stage1, lr=5e-5) | **0.953** | 25.0 | 69.0 |
+| stage2-scratch (lr=3e-4, OneCycleLR) | **0.945** | 16.0 | 55.0 |
+
+### Curriculum learning verdict
+The from-scratch model (stage2-scratch) outperforms curriculum-stage2 on the primary task
+(93.8% vs 90.6% on full gate set). Curriculum pretraining slightly helps on Clifford-only
+circuits (95.3% vs 94.5%) — the stage1 warm-up provides a small benefit there — but this
+comes at the cost of full-gate performance. The curriculum approach as implemented does not
+provide a net benefit. Root causes are documented below.
 
 ## Dataset Sizes (actual stored tensors)
 
