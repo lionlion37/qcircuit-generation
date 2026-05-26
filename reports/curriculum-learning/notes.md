@@ -49,8 +49,11 @@ Stage2 alone is ~3x fewer than baseline.
 
 ### 1. Stage2 dataset smaller than baseline
 `num_samples: 4000000` in both configs, but after dedup + balance pipeline: 664K (stage2) vs 2.1M (baseline).
-Stage2 gets ~3x less training data during fine-tuning, likely due to the smaller generation gate set
-(no ccx) producing a less diverse circuit space with higher deduplication rates.
+Stage2 gets ~3x less training data during fine-tuning. Note: the stage2 dataset already contains 27.1%
+Clifford-only circuits (no CCX in gate pool), because each circuit is generated with a random subset of
+the full gate pool as its prompt — so subset prompts without CCX occur naturally. This means data replay
+of stage1 Clifford circuits into stage2 training is already happening implicitly and would not provide
+additional benefit. The data shortage is driven by higher deduplication rates at scale.
 
 ### 2. OneCycleLR inappropriate for fine-tuning
 Both stages use `OneCycleLR`. This scheduler ramps LR up then anneals to near-zero — designed for from-scratch training. For fine-tuning from pretrained weights, the warmup phase disrupts learned features. Literature recommends cosine annealing without warmup or constant-then-decay.
@@ -60,6 +63,23 @@ Removing CCX from stage1 doesn't simplify the task — it changes the distributi
 
 ### 4. Backend mismatch between stages
 Stage1 uses quditkit, stage2 uses qiskit. Even for the same gate set, the backends produce circuits with different statistical properties. Unique-sample ratio at 100K: 69.4% (quditkit optimized) vs 75.9% (qiskit optimized).
+
+## Stage2 Dataset Composition
+
+The stage2 dataset uses random gate-pool subsets per circuit (uniform random subset of the full 6-gate pool,
+size 1–6). This means the distribution of CCX exposure is not binary:
+
+| Gate pool subset type | Count | Fraction |
+|---|---|---|
+| Contains CCX (full-gate circuits) | 483,780 | 72.9% |
+| Clifford-only (no CCX) | 180,082 | 27.1% |
+| **Total** | **663,862** | |
+
+Gate pool size distribution: 2 gates (10.6%), 3 gates (21.4%), 4 gates (28.2%), 5 gates (30.8%), 6 gates (9.0%).
+
+**Implication**: Stage2 already provides implicit replay of Clifford-only circuits throughout training. There is
+no catastrophic forgetting of Clifford knowledge — the model sees Clifford-only examples in every epoch.
+The performance gap vs baseline is entirely explained by the 3x data volume difference.
 
 ## Training Config Comparison
 
@@ -88,7 +108,10 @@ Stage1 uses quditkit, stage2 uses qiskit. Even for the same gate set, the backen
 Schedule which denoising timesteps are sampled during training: start with high-noise (easy), gradually include low-noise (hard). No dataset changes needed.
 
 ### D. Mixed/replay training
-During stage2, mix stage1 samples into batches (e.g., 20/80 split) to prevent catastrophic forgetting and increase data volume.
+~~During stage2, mix stage1 samples into batches (e.g., 20/80 split) to prevent catastrophic forgetting.~~
+**Note: this is redundant.** The stage2 dataset already contains 27.1% Clifford-only circuits by design
+(random gate-pool subsets per circuit), so replay is already built in. The real bottleneck is total data volume,
+not distribution mixing. To increase volume, fix issue #1 instead.
 
 ## References
 - arXiv:2403.10348 — Denoising Task Difficulty-based Curriculum for Diffusion Models
