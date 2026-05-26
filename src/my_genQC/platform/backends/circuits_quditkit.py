@@ -36,18 +36,21 @@ def instruction_name_to_quditsim_gate(name: str) -> Gate:
 
 
 def get_target_control_qubits(op: tuple) -> Tuple[List[int], List[int]]:
-    """Get the target and control qubits of a Quditkit Operation"""
+    """Get the target and control qubits of a Quditkit Operation.
+
+    Quditkit stores multi-qubit gate operands as (control, target) in acts_on,
+    matching the append(gate, (*control, *target)) call convention.
+    """
     # TODO: think about if there could be gates with more than one control/target qubit
 
     acts_on = op[1]
 
-    target_qubit = [acts_on[0]]
-
     if len(acts_on) == 1:
         control_qubit = []
-
+        target_qubit  = [acts_on[0]]
     else:
-        control_qubit = [acts_on[1]]
+        control_qubit = [acts_on[0]]
+        target_qubit  = [acts_on[1]]
 
     return control_qubit, target_qubit
 
@@ -97,9 +100,18 @@ class CircuitsQuditkitBackend(BaseBackend):
         return qc
 
     def get_unitary(self, qc: QuantumCircuit, remove_global_phase: bool = True) -> np.ndarray:
-        """Return the unitary matrix of a `QuantumCircuit`. Note that remove_global_phase is not supported."""
+        """Return the unitary matrix of a `QuantumCircuit` in qiskit (little-endian) convention.
+
+        Quditkit uses big-endian basis ordering (qubit 0 = MSB) while qiskit uses
+        little-endian (qubit 0 = LSB). The bit-reversal permutation P converts between
+        them: U_qiskit = P @ U_quditkit @ P  (P is its own inverse for bit-reversal).
+        """
         U = qc.get_unitary().astype(np.complex128)
-        return U
+        n   = qc.n
+        dim = 2 ** n
+        perm = np.array([int(format(i, '0{}b'.format(n))[::-1], 2) for i in range(dim)])
+        P = np.eye(dim)[perm]
+        return P @ U @ P
 
     def schmidt_rank_vector(self, qc: Optional[QuantumCircuit] = None,
                             tableau: Optional[Tableau] = None) -> List[int]:
