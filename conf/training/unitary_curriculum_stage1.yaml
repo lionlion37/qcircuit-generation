@@ -32,6 +32,7 @@ training:
   learning_rate: 3e-4
   optimizer: Adam
   lr_scheduler: OneCycleLR
+  balance_max: 45000  # subsample the 3M dataset to ~1.4M at load time (45K per unique prompt × 31 prompts), preserving prompt distribution
   loss: MSELoss
   num_epochs: 150
   batch_size: 256

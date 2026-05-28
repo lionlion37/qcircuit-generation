@@ -50,6 +50,8 @@ def main(cfg):
         dataloader_kwargs = {"text_encoder_njobs": cfg.general.njobs}
         if "max_samples" in cfg.training and cfg.training.max_samples:
             dataloader_kwargs["max_samples"] = int(cfg.training.max_samples)
+        if "balance_max" in cfg.training and cfg.training.balance_max:
+            dataloader_kwargs["balance_max"] = int(cfg.training.balance_max)
 
         dataloaders = dataset_loader.get_dataloaders(
             dataset,

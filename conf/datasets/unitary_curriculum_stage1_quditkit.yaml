@@ -1,19 +1,27 @@
 # Stage-1 curriculum dataset for unitary compilation.
 # Uses the final token vocabulary but excludes `ccx` from active generation
 # so the dataset can be generated efficiently with quditkit.
+#
+# balance_max raised from 60000 to maximise the number of unique Clifford
+# circuits extracted from the smaller 5-gate space (no ccx).
+# balance_quantile set to 1.0 so the per-bucket sample target = max bucket
+# size, meaning every bucket keeps ALL its unique circuits up to balance_max.
+# (quantile=0 would set target = min bucket ≈ 150 and collapse everything.)
+# num_samples raised to 10M attempts to ensure all buckets are saturated.
+# Circuit length kept at 2-12 to match the genQC paper baseline.
 
 gate_set: ['h', 'cx', 'z', 'x', 'ccx', 'swap']
 generation_gate_set: ['h', 'cx', 'z', 'x', 'swap']
 num_qubits: 3
-num_samples: 3000000
+num_samples: 10000000
 min_gates: 2
 max_gates: 12
 condition_type: UNITARY
 backbone: quditkit
 optimized: true
 balance_after_generation: true
-balance_max: 60000
-balance_quantile: 0.25
+balance_max: 200000
+balance_quantile: 1.0
 device: auto
 n_jobs: 12
 output_path: ./artifacts/datasets/unitary-curriculum-learning/stage1

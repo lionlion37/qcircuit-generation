@@ -272,17 +272,17 @@ class MixedCachedOpenCLIPDataset(CachedOpenCLIPDataset):
     
     #-----------------------------------
     
-    def get_dataloaders(self, batch_size, text_encoder, p_valid=0.1, y_on_cpu=False, return_tensor_datasets=False, shuffle=True, shuffle_cpu_copy=True, caching=True, text_encoder_njobs=1):
+    def get_dataloaders(self, batch_size, text_encoder, p_valid=0.1, y_on_cpu=False, return_tensor_datasets=False, shuffle=True, shuffle_cpu_copy=True, caching=True, text_encoder_njobs=1, balance_max=None, max_samples=None):
         #-------------------------
         # caching
-        
+
         self.text_encoder = text_encoder
 
         print("[DEBUG]: run get_dataloaders.x_y_preprocess", flush=True)
-        x_proc, y_proc, *z_proc = ConfigDataset.x_y_preprocess(self, 
-                                                               balance_max=None, 
-                                                               shuffle=False, 
-                                                               max_samples=None, 
+        x_proc, y_proc, *z_proc = ConfigDataset.x_y_preprocess(self,
+                                                               balance_max=balance_max,
+                                                               shuffle=False,
+                                                               max_samples=max_samples,
                                                                make_unique=False)    # ... z_proc is `'z' and all other 'c'
         if caching:
             if self.bucket_batch_size <= 0:

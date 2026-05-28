@@ -76,7 +76,7 @@ class DiffusionPipeline_Compilation(DiffusionPipeline):
          
         #do the cond embedding with CLIP                     
         y = y.to(self.device, non_blocking=self.non_blocking)  
-        U = U.to(self.device, non_blocking=self.non_blocking)  
+        U = U.to(self.device, non_blocking=self.non_blocking).float()
         
         if self.enable_guidance_train and train: 
             rnd_y, rnd_U = torch.empty((2*b,), device=self.device).bernoulli_(p=1.0-self.guidance_train_p).type(torch.int64).chunk(2, dim=0)

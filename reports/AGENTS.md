@@ -41,3 +41,5 @@ reports/
 |-----------------------------------|------------------------------------------------------|
 | `srv-dataset-backend-comparison/` | Quditkit vs Qiskit generation speed and unique ratios |
 | `srv-text-encoder-ablation/`      | CLOOB vs CLIP text encoder accuracy comparison       |
+| `swap-count-conditioning/`        | SWAP-count conditioning for unitary compilation; compliance vs accuracy tradeoff |
+| `srv-cx-level-conditioning/`      | CX-level (low/medium/high) noise conditioning for SRV generation; 87–96% accuracy |
