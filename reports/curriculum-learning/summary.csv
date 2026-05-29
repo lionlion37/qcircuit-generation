@@ -1,0 +1,5 @@
+model,exact_found_rate,mean_exact_count,median_exact_count,mean_distinct_correct,median_distinct_correct,mean_valid_decode_rate
+remote,0.984375,86.28125,98.0,30.8671875,25.0,0.9915771484375
+baseline,0.96875,83.828125,91.0,32.9140625,27.5,0.99652099609375
+stage2_scratch,0.9375,59.1640625,65.5,13.65625,11.0,0.99761962890625
+curriculum_stage2,0.921875,76.7734375,84.5,24.3203125,16.5,0.9918212890625
